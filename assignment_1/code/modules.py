@@ -175,7 +175,7 @@ class CrossEntropyModule(object):
     Implement forward pass of the module. 
     """
 
-    out = - np.sum(np.dot(y, np.log(x)))
+    out = - np.sum(y * np.log(x))
     return out
 
   def backward(self, x, y):

@@ -21,11 +21,9 @@ class LinearModule(object):
     
     Also, initialize gradients with zeros.
     """
-    
 
-    self.params = {'weight': np.random.normal(0, 0.0001, (out_features, in_features)), 'bias': np.zeros((in_features,1))}
-    self.grads = {'weight': np.zeros((out_features,in_features)), 'bias': np.zeros((in_features,1))}
-
+    self.params = {'weight': np.random.normal(0, 0.0001, (out_features, in_features)), 'bias': np.zeros((out_features, 1))}
+    self.grads = {'weight': np.zeros((out_features,in_features)), 'bias': np.zeros((out_features, 1))}
 
   def forward(self, x):
     """
@@ -40,8 +38,8 @@ class LinearModule(object):
     
     Hint: You can store intermediate variables inside the object. They can be used in backward pass computation.                                                           #
     """
-
-    out = self.params['weight'] @ x + self.params['bias']
+    out = (self.params['weight'] @ x.T + self.params['bias']).T
+    print(out.shape)
     self.x = x
     return out
 

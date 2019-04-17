@@ -39,7 +39,6 @@ class LinearModule(object):
     Hint: You can store intermediate variables inside the object. They can be used in backward pass computation.                                                           #
     """
     out = (self.params['weight'] @ x.T + self.params['bias']).T
-    print(out.shape)
     self.x = x
     return out
 
@@ -51,19 +50,15 @@ class LinearModule(object):
       dout: gradients of the previous module
     Returns:
       dx: gradients with respect to the input of the module
-    
-    TODO:
+
     Implement backward pass of the module. Store gradient of the loss with respect to 
     layer parameters in self.grads['weight'] and self.grads['bias']. 
     """
 
-    ########################
-    # PUT YOUR CODE HERE  #
-    #######################
-    raise NotImplementedError
-    ########################
-    # END OF YOUR CODE    #
-    #######################
+    self.grads['weight'] = dout.T @ self.x
+    # adding a new axis but saving the size for internal broadcasting
+    self.grads['bias'] = np.sum(dout,axis=0)[:, None]
+    dx = dout @ self.params['weight']
     
     return dx
 
@@ -88,7 +83,7 @@ class ReLUModule(object):
 
     # other ways to do relu np.maximum(0,x) or (abs(x) + x) / 2; but this way is the fastest
     out = x * (x > 0)
-    self.grad = (x > 0)
+    self.relubackprop = (x > 0)
     return out
 
   def backward(self, dout):
@@ -100,18 +95,10 @@ class ReLUModule(object):
     Returns:
       dx: gradients with respect to the input of the module
     
-    TODO:
+
     Implement backward pass of the module.
     """
-
-    ########################
-    # PUT YOUR CODE HERE  #
-    #######################
-    raise NotImplementedError
-    ########################
-    # END OF YOUR CODE    #
-    #######################    
-
+    dx = dout * self.relubackprop
     return dx
 
 class SoftMaxModule(object):
@@ -131,8 +118,10 @@ class SoftMaxModule(object):
     
     Hint: You can store intermediate variables inside the object. They can be used in backward pass computation.                                                           #
     """
-    b = x.max()
-    out = np.exp(x-b) / sum(np.exp(x-b))
+    b = x.max(axis=1)[..., None]
+    out = np.exp(x-b) / np.sum(np.exp(x-b), axis=1)[..., None]
+    # softmax probabilities we need for back prop
+    self.softmax = out
     return out
 
   def backward(self, dout):
@@ -144,18 +133,15 @@ class SoftMaxModule(object):
     Returns:
       dx: gradients with respect to the input of the module
     
-    TODO:
+
     Implement backward pass of the module.
     """
+    ds_dx = - self.softmax[:, :, None] * self.softmax[:, None, :]
 
-    ########################
-    # PUT YOUR CODE HERE  #
-    #######################
-    raise NotImplementedError
-    ########################
-    # END OF YOUR CODE    #
-    #######################
-
+    for batch in range(self.softmax.shape[0]):
+      ds_dx[batch, :, :] += np.diag(self.softmax[batch, :])
+    dx = np.einsum('ij, ijk -> ik', dout, ds_dx)
+    # dx = dout @ ds_dx
     return dx
 
 class CrossEntropyModule(object):
@@ -175,7 +161,7 @@ class CrossEntropyModule(object):
     Implement forward pass of the module. 
     """
 
-    out = - np.sum(y * np.log(x))
+    out = - np.sum(y * np.log(x), axis=1).mean()
     return out
 
   def backward(self, x, y):
@@ -187,17 +173,9 @@ class CrossEntropyModule(object):
       y: labels of the input
     Returns:
       dx: gradient of the loss with the respect to the input x.
-    
-    TODO:
+
     Implement backward pass of the module.
     """
 
-    ########################
-    # PUT YOUR CODE HERE  #
-    #######################
-    raise NotImplementedError
-    ########################
-    # END OF YOUR CODE    #
-    #######################
-
+    dx = (- y / x)/len(y)
     return dx

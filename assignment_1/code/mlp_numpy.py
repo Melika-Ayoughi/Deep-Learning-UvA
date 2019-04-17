@@ -71,6 +71,6 @@ class MLP(object):
     Implement backward pass of the network.
     """
 
-    for module in self.layers:
+    for module in reversed(self.layers):
       dout = module.backward(dout)
     return

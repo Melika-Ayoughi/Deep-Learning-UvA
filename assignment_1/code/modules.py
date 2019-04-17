@@ -11,27 +11,21 @@ class LinearModule(object):
   def __init__(self, in_features, out_features):
     """
     Initializes the parameters of the module. 
-    
+
     Args:
       in_features: size of each input sample
       out_features: size of each output sample
 
-    TODO:
     Initialize weights self.params['weight'] using normal distribution with mean = 0 and 
     std = 0.0001. Initialize biases self.params['bias'] with 0. 
     
     Also, initialize gradients with zeros.
     """
     
-    ########################
-    # PUT YOUR CODE HERE  #
-    #######################
-    self.params = {'weight': None, 'bias': None}
-    self.grads = {'weight': None, 'bias': None}
-    raise NotImplementedError
-    ########################
-    # END OF YOUR CODE    #
-    #######################
+
+    self.params = {'weight': np.random.normal(0, 0.0001, (out_features, in_features)), 'bias': np.zeros((in_features,1))}
+    self.grads = {'weight': np.zeros((out_features,in_features)), 'bias': np.zeros((in_features,1))}
+
 
   def forward(self, x):
     """
@@ -41,21 +35,14 @@ class LinearModule(object):
       x: input to the module
     Returns:
       out: output of the module
-    
-    TODO:
+
     Implement forward pass of the module. 
     
     Hint: You can store intermediate variables inside the object. They can be used in backward pass computation.                                                           #
     """
-    
-    ########################
-    # PUT YOUR CODE HERE  #
-    #######################
-    raise NotImplementedError
-    ########################
-    # END OF YOUR CODE    #
-    #######################
 
+    out = self.params['weight'] @ x + self.params['bias']
+    self.x = x
     return out
 
   def backward(self, dout):
@@ -101,14 +88,9 @@ class ReLUModule(object):
     Hint: You can store intermediate variables inside the object. They can be used in backward pass computation.                                                           #
     """
 
-    ########################
-    # PUT YOUR CODE HERE  #
-    #######################
-    raise NotImplementedError
-    ########################
-    # END OF YOUR CODE    #
-    #######################
-
+    # other ways to do relu np.maximum(0,x) or (abs(x) + x) / 2; but this way is the fastest
+    out = x * (x > 0)
+    self.grad = (x > 0)
     return out
 
   def backward(self, dout):
@@ -145,22 +127,14 @@ class SoftMaxModule(object):
       x: input to the module
     Returns:
       out: output of the module
-    
-    TODO:
+
     Implement forward pass of the module. 
     To stabilize computation you should use the so-called Max Trick - https://timvieira.github.io/blog/post/2014/02/11/exp-normalize-trick/
     
     Hint: You can store intermediate variables inside the object. They can be used in backward pass computation.                                                           #
     """
-
-    ########################
-    # PUT YOUR CODE HERE  #
-    #######################
-    raise NotImplementedError
-    ########################
-    # END OF YOUR CODE    #
-    #######################
-
+    b = x.max()
+    out = np.exp(x-b) / sum(np.exp(x-b))
     return out
 
   def backward(self, dout):
@@ -199,19 +173,11 @@ class CrossEntropyModule(object):
       y: labels of the input
     Returns:
       out: cross entropy loss
-    
-    TODO:
+
     Implement forward pass of the module. 
     """
 
-    ########################
-    # PUT YOUR CODE HERE  #
-    #######################
-    raise NotImplementedError
-    ########################
-    # END OF YOUR CODE    #
-    #######################
-
+    out = - np.sum(np.dot(y, np.log(x)))
     return out
 
   def backward(self, x, y):

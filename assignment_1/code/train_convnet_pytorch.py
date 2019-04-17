@@ -20,7 +20,7 @@ EVAL_FREQ_DEFAULT = 500
 OPTIMIZER_DEFAULT = 'ADAM'
 
 # Directory in which cifar data is saved
-DATA_DIR_DEFAULT = './cifar10/cifar-10-batches-py'
+DATA_DIR_DEFAULT = './cifar10'
 
 FLAGS = None
 

@@ -96,7 +96,6 @@ class TestLayers(unittest.TestCase):
       dout = np.random.randn(N, C)
 
       layer = LinearModule(D, C)
-      
       out = layer.forward(x)
       dx = layer.backward(dout)
       dw = layer.grads['weight']
@@ -150,5 +149,5 @@ if __name__ == '__main__':
   suite = unittest.TestLoader().loadTestsFromTestCase(TestLayers)
   unittest.TextTestRunner(verbosity=2).run(suite)
 
-  suite = unittest.TestLoader().loadTestsFromTestCase(TestBatchNorm)
-  unittest.TextTestRunner(verbosity=3).run(suite)
+  #suite = unittest.TestLoader().loadTestsFromTestCase(TestBatchNorm)
+  #unittest.TextTestRunner(verbosity=3).run(suite)

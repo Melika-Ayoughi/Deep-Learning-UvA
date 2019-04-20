@@ -30,7 +30,7 @@ class ConvNet(nn.Module):
         super().__init__()
 
         self.layers = nn.Sequential(
-            self.conv_layer(3, 64, 3, 1, 1),
+            self.conv_layer(n_channels, 64, 3, 1, 1),
             self.pooling_layer(3, 2, 1),
             self.conv_layer(64, 128, 3, 1, 1),
             self.pooling_layer(3, 2, 1),
@@ -46,11 +46,11 @@ class ConvNet(nn.Module):
             nn.AvgPool2d(1, 1, 0),
 
         )
-        self.linear = nn.Linear(512, 10, True)
+        self.linear = nn.Linear(512, n_classes, True)
 
     def conv_layer(self, in_channels, out_channels, k, s, p):
         layer = nn.Sequential(
-        nn.Conv2d(in_channels, out_channels,k , s, p),
+        nn.Conv2d(in_channels, out_channels, k , s, p),
         nn.BatchNorm2d(out_channels),
         nn.ReLU(True)
         )

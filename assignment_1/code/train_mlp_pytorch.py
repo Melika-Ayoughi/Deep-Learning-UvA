@@ -46,9 +46,9 @@ def accuracy(predictions, targets):
     """
 
     predicted_labels = np.argmax(predictions.detach().numpy(), axis=1)
-    taget_labels = targets.numpy()
+    target_labels = targets.numpy()
 
-    accuracy = (predicted_labels == taget_labels).mean()
+    accuracy = (predicted_labels == target_labels).mean()
 
 
     return accuracy

@@ -14,6 +14,7 @@ import cifar10_utils
 import torch.nn as nn
 import torch
 import torch.optim as optim
+import sys
 
 # Default constants
 DNN_HIDDEN_UNITS_DEFAULT = '100'
@@ -105,7 +106,8 @@ def train():
             test_prediction = mlp.forward(test_input)
             test_loss = crossentropy(test_prediction, test_labels)
             test_accuracy = accuracy(test_prediction, test_labels)
-            print("Step: {}, Loss: {:f}, Accuracy: {:f} ".format(step, test_loss, test_accuracy))
+            sys.stdout = open(str(FLAGS.dnn_hidden_units)+'_'+str(FLAGS.learning_rate)+'_'+str(FLAGS.max_steps)+'_'+str(FLAGS.batch_size)+'_'+str(FLAGS.batch_size)+'mlp.txt', 'a')
+            print("{},{:f},{:f}".format(step, test_loss, test_accuracy))
 
 
 def print_flags():

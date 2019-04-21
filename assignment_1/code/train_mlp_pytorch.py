@@ -95,6 +95,8 @@ def train():
     test_input = np.reshape(test_input, (test_input.shape[0], n_inputs))
     test_input, test_labels = torch.from_numpy(test_input), torch.from_numpy(test_labels).long()
 
+    max_accuracy = 0
+    min_loss = 0
     for step in range(FLAGS.max_steps):
         input, labels = dataset['train'].next_batch(FLAGS.batch_size)
         labels = np.argmax(labels,axis=1)
@@ -112,9 +114,16 @@ def train():
             test_prediction = mlp.forward(test_input)
             test_loss = crossentropy(test_prediction, test_labels)
             test_accuracy = accuracy(test_prediction, test_labels)
+            if (max_accuracy < test_accuracy):
+                max_accuracy = test_accuracy
+                min_loss = test_loss
             sys.stdout = open(str(FLAGS.dnn_hidden_units)+'_'+str(FLAGS.learning_rate)+'_'+str(FLAGS.max_steps)+'_'+str(FLAGS.batch_size)+'_'+str(FLAGS.batch_size)+'_'+str(FLAGS.optimizer)+'mlp.txt', 'a')
             print("{},{:f},{:f}".format(step, test_loss, test_accuracy))
 
+    sys.stdout = open(
+        str(FLAGS.dnn_hidden_units) + '_' + str(FLAGS.learning_rate) + '_' + str(FLAGS.max_steps) + '_' + str(
+            FLAGS.batch_size) + '_' + str(FLAGS.batch_size) + '_' + str(FLAGS.optimizer) + 'mlp.txt', 'a')
+    print("max accuracy{:f}, minimum loss{:f}".format(max_accuracy, min_loss))
 
 def print_flags():
     """

@@ -46,8 +46,8 @@ def accuracy(predictions, targets):
     Implement accuracy computation.
     """
 
-    predicted_labels = np.argmax(predictions.detach().numpy(), axis=1)
-    target_labels = targets.numpy()
+    predicted_labels = np.argmax(predictions.cpu().detach().data.numpy(), axis=1)
+    target_labels = targets.cpu().data.numpy()
 
     accuracy = (predicted_labels == target_labels).mean()
     return accuracy
@@ -65,21 +65,24 @@ def train():
 
 
     dataset = cifar10_utils.get_cifar10(DATA_DIR_DEFAULT)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     a, b, c = dataset['train'].images.shape[1:]
     n_classes = dataset['train'].labels.shape[1]
 
-    cnn = ConvNet(3, n_classes)
+    cnn = ConvNet(3, n_classes).to(device)
     optimizer = optim.Adam(cnn.parameters(), lr=FLAGS.learning_rate)
     crossentropy = nn.CrossEntropyLoss()
 
     test_input, test_labels = dataset['test'].images, dataset['test'].labels
+    n_test = test_input.shape[0]
+
     test_labels = np.argmax(test_labels, axis=1)
-    test_input, test_labels = torch.from_numpy(test_input), torch.from_numpy(test_labels).long()
+    test_input, test_labels = torch.from_numpy(test_input).to(device), torch.from_numpy(test_labels).long().to(device)
 
     for step in range(FLAGS.max_steps):
         input, labels = dataset['train'].next_batch(FLAGS.batch_size)
         labels = np.argmax(labels,axis=1)
-        input, labels = torch.from_numpy(input), torch.from_numpy(labels).long()
+        input, labels = torch.from_numpy(input).to(device), torch.from_numpy(labels).long().to(device)
         predictions = cnn.forward(input)
 
         loss = crossentropy(predictions, labels)
@@ -88,13 +91,20 @@ def train():
         loss.backward()
         optimizer.step()
 
-        if (step % FLAGS.eval_freq == 0):
-            test_prediction = cnn.forward(test_input)
-            test_loss = crossentropy(test_prediction, test_labels)
-            test_accuracy = accuracy(test_prediction, test_labels)
+        if (step == FLAGS.max_steps - 1 or step % FLAGS.eval_freq == 0):
+
+            test_loss = []
+            test_accuracy = []
+            for _ in range(0, n_test, FLAGS.batch_size):
+                test_input, test_labels = dataset['test'].next_batch(FLAGS.batch_size)
+                test_input = torch.from_numpy(test_input).to(device)
+                test_labels = torch.from_numpy(np.argmax(test_labels, axis=1)).long().to(device)
+                test_prediction = cnn.forward(test_input)
+                test_loss.append(crossentropy(test_prediction, test_labels))
+                test_accuracy.append(accuracy(test_prediction, test_labels))
 
             sys.stdout = open(str(FLAGS.dnn_hidden_units) + '_' + str(FLAGS.learning_rate) + '_' + str(FLAGS.max_steps) + '_' + str(FLAGS.batch_size) + '_' + str(FLAGS.batch_size) + 'conv.txt', 'a')
-            print("{},{:f},{:f}".format(step, test_loss, test_accuracy))
+            print("{},{:f},{:f}".format(step, np.mean(test_loss), np.mean(test_accuracy)))
 
 
 def print_flags():

@@ -22,6 +22,7 @@ LEARNING_RATE_DEFAULT = 2e-3
 MAX_STEPS_DEFAULT = 1500
 BATCH_SIZE_DEFAULT = 200
 EVAL_FREQ_DEFAULT = 100
+OPTIMIZER = 'SGD'
 
 # Directory in which cifar data is saved
 DATA_DIR_DEFAULT = './cifar10'
@@ -81,7 +82,12 @@ def train():
 
 
     mlp = MLP(n_inputs, dnn_hidden_units, n_classes)
-    optimizer = optim.SGD(mlp.parameters(), lr=FLAGS.learning_rate)
+
+    if (FLAGS.optimizer == 'SGD'):
+        optimizer = optim.SGD(mlp.parameters(), lr=FLAGS.learning_rate)
+    else:
+        optimizer = optim.Adam(mlp.parameters(), lr=FLAGS.learning_rate, weight_decay=1e-2)
+
     crossentropy = nn.CrossEntropyLoss()
 
     test_input, test_labels = dataset['test'].images, dataset['test'].labels
@@ -106,7 +112,7 @@ def train():
             test_prediction = mlp.forward(test_input)
             test_loss = crossentropy(test_prediction, test_labels)
             test_accuracy = accuracy(test_prediction, test_labels)
-            sys.stdout = open(str(FLAGS.dnn_hidden_units)+'_'+str(FLAGS.learning_rate)+'_'+str(FLAGS.max_steps)+'_'+str(FLAGS.batch_size)+'_'+str(FLAGS.batch_size)+'mlp.txt', 'a')
+            sys.stdout = open(str(FLAGS.dnn_hidden_units)+'_'+str(FLAGS.learning_rate)+'_'+str(FLAGS.max_steps)+'_'+str(FLAGS.batch_size)+'_'+str(FLAGS.batch_size)+'_'+str(FLAGS.optimizer)+'mlp.txt', 'a')
             print("{},{:f},{:f}".format(step, test_loss, test_accuracy))
 
 
@@ -145,6 +151,8 @@ if __name__ == '__main__':
                         help='Frequency of evaluation on the test set')
     parser.add_argument('--data_dir', type = str, default = DATA_DIR_DEFAULT,
                         help='Directory for storing input data')
+    parser.add_argument('--optimizer', type=str, default=OPTIMIZER,
+                        help='The optimizer that is being used: either SGD or Adam')
     FLAGS, unparsed = parser.parse_known_args()
 
     main()

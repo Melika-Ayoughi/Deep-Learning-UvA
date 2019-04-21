@@ -117,12 +117,12 @@ def train():
             if (max_accuracy < test_accuracy):
                 max_accuracy = test_accuracy
                 min_loss = test_loss
-            sys.stdout = open(str(FLAGS.dnn_hidden_units)+'_'+str(FLAGS.learning_rate)+'_'+str(FLAGS.max_steps)+'_'+str(FLAGS.batch_size)+'_'+str(FLAGS.batch_size)+'_'+str(FLAGS.optimizer)+'mlp.txt', 'a')
+            sys.stdout = open(str(FLAGS.dnn_hidden_units)+'_'+str(FLAGS.learning_rate)+'_'+str(FLAGS.max_steps)+'_'+str(FLAGS.batch_size)+'_'+str(FLAGS.batch_size)+'_'+str(FLAGS.optimizer)+'_mlp.csv', 'a')
             print("{},{:f},{:f}".format(step, test_loss, test_accuracy))
 
     sys.stdout = open(
         str(FLAGS.dnn_hidden_units) + '_' + str(FLAGS.learning_rate) + '_' + str(FLAGS.max_steps) + '_' + str(
-            FLAGS.batch_size) + '_' + str(FLAGS.batch_size) + '_' + str(FLAGS.optimizer) + 'mlp.txt', 'a')
+            FLAGS.batch_size) + '_' + str(FLAGS.batch_size) + '_' + str(FLAGS.optimizer) + '_mlp.csv', 'a')
     print("max accuracy{:f}, minimum loss{:f}".format(max_accuracy, min_loss))
 
 def print_flags():

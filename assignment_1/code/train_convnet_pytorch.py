@@ -96,11 +96,11 @@ def train():
                 test_input = torch.from_numpy(test_input).to(device)
                 test_labels = torch.from_numpy(np.argmax(test_labels, axis=1)).long().to(device)
                 test_prediction = cnn.forward(test_input)
-                test_loss.append(crossentropy(test_prediction, test_labels))
+                test_loss.append(crossentropy(test_prediction, test_labels).item())
                 test_accuracy.append(accuracy(test_prediction, test_labels))
 
             sys.stdout = open(str(FLAGS.learning_rate) + '_' + str(FLAGS.max_steps) + '_' + str(FLAGS.batch_size) + '_' + str(FLAGS.batch_size) +'conv.txt', 'a')
-            print("{},{:f},{:f}".format(step, torch.mean(test_loss), torch.mean(test_accuracy)))
+            print("{},{:f},{:f}".format(step, np.mean(test_loss), np.mean(test_accuracy)))
 
 
 def print_flags():

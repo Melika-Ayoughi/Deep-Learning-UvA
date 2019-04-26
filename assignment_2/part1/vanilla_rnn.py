@@ -27,8 +27,23 @@ class VanillaRNN(nn.Module):
 
     def __init__(self, seq_length, input_dim, num_hidden, num_classes, batch_size, device='cpu'):
         super(VanillaRNN, self).__init__()
-        # Initialization here ...
+        self.seq_length = seq_length
+        self.num_hidden = num_hidden
+        self.batch_size = batch_size
+
+        self.params = nn.ParameterDict()
+        self.params['W_hx'] = torch.randn(input_dim, num_hidden)
+        self.params['W_hh'] = torch.randn(num_hidden, num_hidden)
+        self.params['W_ph'] = torch.randn(num_hidden, num_classes)
+        self.params['b_h'] = torch.randn(1, num_hidden)
+        self.params['b_p'] = torch.randn(1, num_classes)
 
     def forward(self, x):
-        # Implementation here ...
-        pass
+
+        h_t = nn.zeros(self.batch_size, self.num_hidden)
+        for t in range(self.seq_length):
+            h_pt = h_t # h[t-1]
+            h_t = nn.Tanh(x[t] @ self.params['W_hx'] + h_pt @ self.params['W_hh'] + self.params['b_h'])  # maybe broadcasting i should add axis
+        p = h_pt @ self.params['W_ph'] + self.params['b_p']
+
+        return p

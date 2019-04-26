@@ -26,9 +26,9 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from part1.dataset import PalindromeDataset
-from part1.vanilla_rnn import VanillaRNN
-from part1.lstm import LSTM
+from dataset import PalindromeDataset
+from vanilla_rnn import VanillaRNN
+from lstm import LSTM
 
 # You may want to look into tensorboardX for logging
 # from tensorboardX import SummaryWriter
@@ -43,7 +43,10 @@ def train(config):
     device = torch.device(config.device)
 
     # Initialize the model that we are going to use
-    model = None  # fixme
+    if (config.model_type == 'RNN'):
+        model = VanillaRNN(config.input_length, config.input_dim, config.num_hidden, config.num_classes, config.batch_size, config.device)
+    # else:
+    #     model = LSTM
 
     # Initialize the dataset and data loader (note the +1)
     dataset = PalindromeDataset(config.input_length+1)
@@ -51,7 +54,7 @@ def train(config):
 
     # Setup the loss and optimizer
     criterion = None  # fixme
-    optimizer = None  # fixme
+    optimizer = None  #
 
     for step, (batch_inputs, batch_targets) in enumerate(data_loader):
 

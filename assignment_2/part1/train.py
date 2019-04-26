@@ -24,6 +24,8 @@ from datetime import datetime
 import numpy as np
 
 import torch
+import torch.optim as optim
+import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from dataset import PalindromeDataset
@@ -34,6 +36,14 @@ from lstm import LSTM
 # from tensorboardX import SummaryWriter
 
 ################################################################################
+
+def accuracy(predictions, targets):
+
+    predicted_labels = predictions.argmax(dim=1)
+    target_labels = targets #.long()
+
+    accuracy = (predicted_labels == target_labels).mean()
+    return accuracy
 
 def train(config):
 
@@ -46,33 +56,42 @@ def train(config):
     if (config.model_type == 'RNN'):
         model = VanillaRNN(config.input_length, config.input_dim, config.num_hidden, config.num_classes, config.batch_size, config.device)
     # else:
-    #     model = LSTM
+    #     model = LSTM(config.input_length, config.input_dim, config.num_hidden, config.num_classes, config.batch_size, config.device)
+
 
     # Initialize the dataset and data loader (note the +1)
     dataset = PalindromeDataset(config.input_length+1)
     data_loader = DataLoader(dataset, config.batch_size, num_workers=1)
 
     # Setup the loss and optimizer
-    criterion = None  # fixme
-    optimizer = None  #
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.RMSprop(model.parameters(), lr=config.learning_rate) #, alpha=0.99, eps=1e-8, weight_decay=0, momentum=0, centered=False)
 
+    accuracies = []
+    losses = []
     for step, (batch_inputs, batch_targets) in enumerate(data_loader):
 
         # Only for time measurement of step through network
         t1 = time.time()
 
+        batch_inputs = batch_inputs[..., None]
+        batch_inputs.to(device)
+        batch_targets.to(device)
+
+        batch_predictions = model.forward(batch_inputs)
+        loss = criterion(batch_predictions, batch_targets)
+        losses.append(loss.item())
+        # model.zero_grad() should we do this??
+        loss.backward()
+
+
+        torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=config.max_norm) #prevents maximum gradient problem
+
+        optimizer.step() #before or after clip_grad_norm?
         # Add more code here ...
 
-        ############################################################################
-        # QUESTION: what happens here and why?
-        ############################################################################
-        torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=config.max_norm)
-        ############################################################################
 
-        # Add more code here ...
-
-        loss = np.inf   # fixme
-        accuracy = 0.0  # fixme
+        accuracies.append(accuracy(batch_predictions, batch_targets))
 
         # Just for time measurement
         t2 = time.time()
@@ -93,6 +112,7 @@ def train(config):
             break
 
     print('Done training.')
+    return losses, accuracies
 
 
  ################################################################################
@@ -113,7 +133,7 @@ if __name__ == "__main__":
     parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning rate')
     parser.add_argument('--train_steps', type=int, default=10000, help='Number of training steps')
     parser.add_argument('--max_norm', type=float, default=10.0)
-    parser.add_argument('--device', type=str, default="cuda:0", help="Training device 'cpu' or 'cuda:0'")
+    parser.add_argument('--device', type=str, default="cpu", help="Training device 'cpu' or 'cuda:0'")
 
     config = parser.parse_args()
 

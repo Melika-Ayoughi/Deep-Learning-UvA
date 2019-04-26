@@ -28,22 +28,27 @@ class VanillaRNN(nn.Module):
     def __init__(self, seq_length, input_dim, num_hidden, num_classes, batch_size, device='cpu'):
         super(VanillaRNN, self).__init__()
         self.seq_length = seq_length
+        self.input_dim = input_dim
         self.num_hidden = num_hidden
         self.batch_size = batch_size
+        self.device = device
 
         self.params = nn.ParameterDict()
-        self.params['W_hx'] = torch.randn(input_dim, num_hidden)
-        self.params['W_hh'] = torch.randn(num_hidden, num_hidden)
-        self.params['W_ph'] = torch.randn(num_hidden, num_classes)
-        self.params['b_h'] = torch.randn(1, num_hidden)
-        self.params['b_p'] = torch.randn(1, num_classes)
+        self.params['W_hx'] = torch.nn.Parameter(torch.randn(input_dim, num_hidden))
+        self.params['W_hh'] = torch.nn.Parameter(torch.randn(num_hidden, num_hidden))
+        self.params['W_ph'] = torch.nn.Parameter(torch.randn(num_hidden, num_classes))
+        self.params['b_h'] = torch.nn.Parameter(torch.randn(1, num_hidden))
+        self.params['b_p'] = torch.nn.Parameter(torch.randn(1, num_classes))
+
+        self.to(device)
 
     def forward(self, x):
+        assert x.shape == (self.batch_size, self.seq_length, self.input_dim)
 
-        h_t = nn.zeros(self.batch_size, self.num_hidden)
+        h_t = torch.zeros(self.batch_size, self.num_hidden, device=self.device)
         for t in range(self.seq_length):
             h_pt = h_t # h[t-1]
-            h_t = nn.Tanh(x[t] @ self.params['W_hx'] + h_pt @ self.params['W_hh'] + self.params['b_h'])  # maybe broadcasting i should add axis
+            h_t = nn.Tanh(x[:, t, :] @ self.params['W_hx'] + h_pt @ self.params['W_hh'] + self.params['b_h'])  # maybe broadcasting i should add axis
         p = h_pt @ self.params['W_ph'] + self.params['b_p']
 
         return p

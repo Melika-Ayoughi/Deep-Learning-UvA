@@ -37,13 +37,12 @@ from lstm import LSTM
 
 ################################################################################
 
-def accuracy(predictions, targets):
+def accuracy_(predictions, targets):
 
     predicted_labels = predictions.argmax(dim=1)
     target_labels = targets #.long()
 
-    accuracy = (predicted_labels == target_labels).mean()
-    return accuracy
+    return ((predicted_labels == target_labels).float()).mean()
 
 def train(config):
 
@@ -74,7 +73,7 @@ def train(config):
         # Only for time measurement of step through network
         t1 = time.time()
 
-        batch_inputs = batch_inputs[..., None]
+        batch_inputs = batch_inputs[..., None] # need to add this because input is a number
         batch_inputs.to(device)
         batch_targets.to(device)
 
@@ -88,10 +87,9 @@ def train(config):
         torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=config.max_norm) #prevents maximum gradient problem
 
         optimizer.step() #before or after clip_grad_norm?
-        # Add more code here ...
 
-
-        accuracies.append(accuracy(batch_predictions, batch_targets))
+        accuracy = accuracy_(batch_predictions, batch_targets)
+        accuracies.append(accuracy)
 
         # Just for time measurement
         t2 = time.time()

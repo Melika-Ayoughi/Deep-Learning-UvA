@@ -34,12 +34,13 @@ class VanillaRNN(nn.Module):
         self.device = device
 
         self.params = nn.ParameterDict()
-        self.params['W_hx'] = torch.nn.Parameter(torch.randn(input_dim, num_hidden))
-        self.params['W_hh'] = torch.nn.Parameter(torch.randn(num_hidden, num_hidden))
-        self.params['W_ph'] = torch.nn.Parameter(torch.randn(num_hidden, num_classes))
-        self.params['b_h'] = torch.nn.Parameter(torch.randn(1, num_hidden))
-        self.params['b_p'] = torch.nn.Parameter(torch.randn(1, num_classes))
+        self.params['W_hx'] = nn.Parameter(torch.randn(input_dim, num_hidden))
+        self.params['W_hh'] = nn.Parameter(torch.randn(num_hidden, num_hidden))
+        self.params['W_ph'] = nn.Parameter(torch.randn(num_hidden, num_classes))
+        self.params['b_h'] = nn.Parameter(torch.randn(1, num_hidden))
+        self.params['b_p'] = nn.Parameter(torch.randn(1, num_classes))
 
+        self.activation = nn.Tanh()
         self.to(device)
 
     def forward(self, x):
@@ -47,8 +48,10 @@ class VanillaRNN(nn.Module):
 
         h_t = torch.zeros(self.batch_size, self.num_hidden, device=self.device)
         for t in range(self.seq_length):
-            h_pt = h_t # h[t-1]
-            h_t = nn.Tanh(x[:, t, :] @ self.params['W_hx'] + h_pt @ self.params['W_hh'] + self.params['b_h'])  # maybe broadcasting i should add axis
+            # h[t-1]
+            h_pt = h_t
+            y = x[:, t, :] @ self.params['W_hx'] + h_pt @ self.params['W_hh'] + self.params['b_h']
+            h_t = self.activation(y)
         p = h_pt @ self.params['W_ph'] + self.params['b_p']
 
         return p

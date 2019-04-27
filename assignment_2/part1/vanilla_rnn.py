@@ -52,6 +52,6 @@ class VanillaRNN(nn.Module):
             h_pt = h_t
             y = x[:, t, :] @ self.params['W_hx'] + h_pt @ self.params['W_hh'] + self.params['b_h']
             h_t = self.activation(y)
-        p = h_pt @ self.params['W_ph'] + self.params['b_p']
+        p = h_t @ self.params['W_ph'] + self.params['b_p']
 
         return p

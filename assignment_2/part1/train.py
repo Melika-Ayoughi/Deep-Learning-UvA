@@ -68,6 +68,7 @@ def train(config):
 
     accuracies = []
     losses = []
+    old_loss = float('inf')
     for step, (batch_inputs, batch_targets) in enumerate(data_loader):
 
         # Only for time measurement of step through network
@@ -80,7 +81,7 @@ def train(config):
         batch_predictions = model.forward(batch_inputs)
         loss = criterion(batch_predictions, batch_targets)
         losses.append(loss.item())
-        # model.zero_grad() should we do this??
+        model.zero_grad() #should we do this??
         loss.backward()
 
 
@@ -104,10 +105,11 @@ def train(config):
                     accuracy, loss
             ))
 
-        if step == config.train_steps:
+        if step == config.train_steps or old_loss == loss.item(): # stop if two consecutive losses remain consistent
             # If you receive a PyTorch data-loader error, check this bug report:
             # https://github.com/pytorch/pytorch/pull/9655
             break
+        old_loss = loss.item()
 
     print('Done training.')
     return losses, accuracies
@@ -131,7 +133,7 @@ if __name__ == "__main__":
     parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning rate')
     parser.add_argument('--train_steps', type=int, default=10000, help='Number of training steps')
     parser.add_argument('--max_norm', type=float, default=10.0)
-    parser.add_argument('--device', type=str, default="cpu", help="Training device 'cpu' or 'cuda:0'")
+    parser.add_argument('--device', type=str, default="cuda:0", help="Training device 'cpu' or 'cuda:0'")
 
     config = parser.parse_args()
 

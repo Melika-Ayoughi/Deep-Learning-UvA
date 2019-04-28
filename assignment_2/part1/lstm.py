@@ -34,28 +34,18 @@ class LSTM(nn.Module):
         self.device = device
 
         self.params = nn.ParameterDict()
-        self.params['W_gx'] = nn.Parameter(torch.randn(input_dim, num_hidden))
-        self.params['W_gh'] = nn.Parameter(torch.randn(num_hidden, num_hidden))
-        self.params['b_g'] = nn. Parameter(torch.randn(1, num_hidden))
+        for gate in ('g','i','f','o'):
+            self.params['W_' + gate + 'x'] = nn.Parameter(torch.empty(input_dim, num_hidden))
+            self.params['W_' + gate + 'h'] = nn.Parameter(torch.empty(num_hidden, num_hidden))
+            nn.init.kaiming_normal_(self.params['W_' + gate + 'x'])
+            nn.init.kaiming_normal_(self.params['W_' + gate + 'h'])
+            self.params['b_' + gate] = nn.Parameter(torch.zeros(1, num_hidden))
 
-        self.params['W_ix'] = nn.Parameter(torch.randn(input_dim, num_hidden))
-        self.params['W_ih'] = nn.Parameter(torch.randn(num_hidden, num_hidden))
-        self.params['b_i'] = nn.Parameter(torch.randn(1, num_hidden))
-
-        self.params['W_fx'] = nn.Parameter(torch.randn(input_dim, num_hidden))
-        self.params['W_fh'] = nn.Parameter(torch.randn(num_hidden, num_hidden))
-        self.params['b_f'] = nn.Parameter(torch.randn(1, num_hidden))
-
-        self.params['W_ox'] = nn.Parameter(torch.randn(input_dim, num_hidden))
-        self.params['W_oh'] = nn.Parameter(torch.randn(num_hidden, num_hidden))
-        self.params['b_o'] = nn.Parameter(torch.randn(1, num_hidden))
-
-        self.params['W_ph'] = nn.Parameter(torch.randn(num_hidden, num_classes))
-        self.params['b_p'] = nn.Parameter(torch.randn(1, num_classes))
+        self.params['W_ph'] = nn.Parameter(0.1 * torch.randn(num_hidden, num_classes))
+        self.params['b_p'] = nn.Parameter(torch.zeros(1, num_classes))
 
         self.tanh_activation = nn.Tanh()
         self.sig_activation = nn.Sigmoid()
-
         self.to(device)
 
     def forward(self, x):
@@ -64,14 +54,12 @@ class LSTM(nn.Module):
         h_t = torch.zeros(self.batch_size, self.num_hidden, device=self.device)
         c_t = torch.zeros(self.batch_size, self.num_hidden, device=self.device)
         for t in range(self.seq_length):
-            h_pt = h_t
-            c_pt = c_t
-            g = self.tanh_activation(x[:, t, :] @ self.params['W_gx'] + h_pt @ self.params['W_gh'] + self.params['b_g'])
-            i = self.sig_activation(x[:, t, :] @ self.params['W_ix'] + h_pt @ self.params['W_ih'] + self.params['b_i'])
-            f = self.sig_activation(x[:, t, :] @ self.params['W_fx'] + h_pt @ self.params['W_fh'] + self.params['b_f'])
-            o = self.sig_activation(x[:, t, :] @ self.params['W_ox'] + h_pt @ self.params['W_oh'] + self.params['b_o'])
+            g = self.tanh_activation(x[:, t, :] @ self.params['W_gx'] + h_t @ self.params['W_gh'] + self.params['b_g'])
+            i = self.sig_activation(x[:, t, :] @ self.params['W_ix'] + h_t @ self.params['W_ih'] + self.params['b_i'])
+            f = self.sig_activation(x[:, t, :] @ self.params['W_fx'] + h_t @ self.params['W_fh'] + self.params['b_f'])
+            o = self.sig_activation(x[:, t, :] @ self.params['W_ox'] + h_t @ self.params['W_oh'] + self.params['b_o'])
 
-            c_t = g * i + c_pt * f
+            c_t = g * i + c_t * f
             h_t = self.tanh_activation(c_t) * o
 
         p = h_t @ self.params['W_ph'] + self.params['b_p']

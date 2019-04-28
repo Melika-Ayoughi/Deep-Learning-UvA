@@ -53,9 +53,9 @@ def train(config):
 
     # Initialize the model that we are going to use
     if (config.model_type == 'RNN'):
-        model = VanillaRNN(config.input_length, config.input_dim, config.num_hidden, config.num_classes, config.batch_size, config.device)
+        model = VanillaRNN(config.input_length, config.input_dim, config.num_hidden, config.num_classes, config.batch_size, device)
     else:
-        model = LSTM(config.input_length, config.input_dim, config.num_hidden, config.num_classes, config.batch_size, config.device)
+        model = LSTM(config.input_length, config.input_dim, config.num_hidden, config.num_classes, config.batch_size, device)
 
 
     # Initialize the dataset and data loader (note the +1)

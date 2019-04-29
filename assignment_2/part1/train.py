@@ -75,8 +75,8 @@ def train(config):
         t1 = time.time()
 
         batch_inputs = batch_inputs[..., None] # need to add this because input is a number
-        batch_inputs.to(device)
-        batch_targets.to(device)
+        batch_inputs = batch_inputs.to(device)
+        batch_targets = batch_targets.to(device)
 
         batch_predictions = model.forward(batch_inputs)
         loss = criterion(batch_predictions, batch_targets)

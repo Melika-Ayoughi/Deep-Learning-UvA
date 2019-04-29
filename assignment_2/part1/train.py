@@ -40,7 +40,7 @@ from lstm import LSTM
 def accuracy_(predictions, targets):
 
     predicted_labels = predictions.argmax(dim=1)
-    target_labels = targets #.long()
+    target_labels = targets
 
     return ((predicted_labels == target_labels).float()).mean()
 

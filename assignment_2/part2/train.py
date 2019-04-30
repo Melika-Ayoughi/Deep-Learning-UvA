@@ -22,6 +22,7 @@ import time
 from datetime import datetime
 import argparse
 
+
 import numpy as np
 
 import torch
@@ -36,7 +37,7 @@ from model import TextGenerationModel
 def accuracy_(predictions, targets):
 
     predicted_labels = predictions.argmax(dim=1)
-    target_labels = targets #.long()
+    target_labels = targets
 
     return ((predicted_labels == target_labels).float()).mean()
 
@@ -53,8 +54,6 @@ def train(config):
     model = TextGenerationModel(config.batch_size, config.seq_length, dataset.vocab_size,
                                 config.lstm_num_hidden, config.lstm_num_layers, device)
 
-
-    # Setup the loss and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.RMSprop(model.parameters(), lr=config.learning_rate)
 
@@ -65,11 +64,11 @@ def train(config):
         # Only for time measurement of step through network
         t1 = time.time()
 
-        # batch_inputs = batch_inputs  # need to add this because input is a number
-        batch_inputs = batch_inputs.to(device)
-        batch_targets = batch_targets.to(device)
+        batch_inputs = torch.stack(batch_inputs).to(device)
+        batch_targets = torch.stack(batch_targets, dim=1).to(device) #dim=1 to avoid transposing
 
         batch_predictions = model.forward(batch_inputs)
+        batch_predictions = batch_predictions.permute(1, 2, 0)
         loss = criterion(batch_predictions, batch_targets)
         losses.append(loss.item())
         model.zero_grad()  # should we do this??
@@ -79,30 +78,35 @@ def train(config):
 
         optimizer.step()  # before or after clip_grad_norm?
 
+        accuracy = accuracy_(batch_predictions, batch_targets)
+        accuracies.append(accuracy)
+
+
         # Just for time measurement
         t2 = time.time()
         examples_per_second = config.batch_size/float(t2-t1)
 
         if step % config.print_every == 0:
 
-            print("[{}] Train Step {:04d}/{:04d}, Batch Size = {}, Examples/Sec = {:.2f}, "
+            print("[{}] Train Step {}/{}, Batch Size = {}, Examples/Sec = {:.2f}, "
                   "Accuracy = {:.2f}, Loss = {:.3f}".format(
-                    datetime.now().strftime("%Y-%m-%d %H:%M"), step,
-                    config.train_steps, config.batch_size, examples_per_second,
+                    datetime.now().strftime("%Y-%m-%d %H:%M"), int(step),
+                    int(config.train_steps), config.batch_size, examples_per_second,
                     accuracy, loss
             ))
 
-        if step == config.sample_every:
+        if step % config.sample_every == 0:
             # Generate some sentences by sampling from the model
             pass
 
         if step == config.train_steps:
+            torch.save(model.state_dict(), config.save_file)
             # If you receive a PyTorch data-loader error, check this bug report:
             # https://github.com/pytorch/pytorch/pull/9655
             break
 
     # save only the model parameters
-    torch.save(model.state_dict(), config.save_file)
+
     # revive the model
     # model = TextGenerationModel(config.batch_size, config.seq_length, dataset.vocab_size(),
     #                                 config.lstm_num_hidden, config.lstm_num_layers, device)
@@ -120,7 +124,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # Model params
-    parser.add_argument('--txt_file', type=str, default="./tiny-shakespeare.txt", help="Path to a .txt file to train on")
+    parser.add_argument('--txt_file', type=str, default="./Hafez.txt", help="Path to a .txt file to train on")
     parser.add_argument('--seq_length', type=int, default=30, help='Length of an input sequence')
     parser.add_argument('--lstm_num_hidden', type=int, default=128, help='Number of hidden units in the LSTM')
     parser.add_argument('--lstm_num_layers', type=int, default=2, help='Number of LSTM layers in the model')
@@ -143,7 +147,7 @@ if __name__ == "__main__":
     parser.add_argument('--print_every', type=int, default=5, help='How often to print training progress')
     parser.add_argument('--sample_every', type=int, default=100, help='How often to sample from the model')
 
-    parser.add_argument('--save_file', type=str, default="./outputs/saved_model.txt", help="Path to a .txt file to save the model on")
+    parser.add_argument('--save_file', type=str, default="./outputs/saved_model.pt", help="Path to a .txt file to save the model on")
     parser.add_argument('--device', type=str, default="cuda:0", help="Training device 'cpu' or 'cuda:0'")
 
     config = parser.parse_args()

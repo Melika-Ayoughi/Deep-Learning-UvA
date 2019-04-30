@@ -18,6 +18,7 @@ from __future__ import division
 from __future__ import print_function
 
 import torch.nn as nn
+import torch
 
 
 class TextGenerationModel(nn.Module):
@@ -27,14 +28,16 @@ class TextGenerationModel(nn.Module):
         super(TextGenerationModel, self).__init__()
         self.batch_size = batch_size
         self.seq_length = seq_length
-        self.voc_size = vocabulary_size
-        self.embed = nn.Embedding(vocabulary_size, vocabulary_size)
-        self.LSTM = nn.LSTM(input_size=vocabulary_size, hidden_size=lstm_num_hidden, num_layers=lstm_num_layers, dropout=0) #inputsize?? 1 character?? number of expected features is vocabsize
 
+        self.embed = nn.Embedding(vocabulary_size, vocabulary_size, _weight=torch.eye(vocabulary_size))
+        self.embed.weight.requires_grad = False #don't learn the embeddings
+        self.LSTM = nn.LSTM(input_size=vocabulary_size, hidden_size=lstm_num_hidden, num_layers=lstm_num_layers, dropout=0)
+        self.linear = nn.Linear(lstm_num_hidden, vocabulary_size)
         self.to(device)
 
     def forward(self, x):
-        assert x.shape == (self.seq_length, self.batch_size, self.voc_size)
+        # assert x.shape == (self.seq_length, self.batch_size)
         x_embedding = self.embed(x)
+
         output, (hn, cn) = self.LSTM(x_embedding) #h0 and c0 are by default initialized to zero
-        return output, (hn, cn)
+        return self.linear(output)

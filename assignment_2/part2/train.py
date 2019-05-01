@@ -52,7 +52,7 @@ def accuracy_(predictions, targets):
 
     return ((predicted_labels == target_labels).float()).mean()
 
-def generate_sentence(model, dataset, temperature):
+def generate_sentence(model, dataset, temperature, length):
     #start with a random char, input it to the network and get output
 
     rand_char = torch.randint(0, dataset.vocab_size, (1, 1))
@@ -62,7 +62,7 @@ def generate_sentence(model, dataset, temperature):
         predicted_char = rand_char
         h_0_c_0 = None
 
-        for i in range(30):
+        for i in range(length):
             predicted_char, h_0_c_0 = model.forward(predicted_char, h_0_c_0)
             predicted_char = sample_next_char(predicted_char.squeeze(), temperature)
             predicted_char = torch.tensor([[predicted_char]])
@@ -130,21 +130,27 @@ def train(config):
                 ))
 
             if step % config.sample_every == 0:
+
                 for temperature in [0, 0.5, 1, 2]:
-                    sentence = generate_sentence(model, dataset, temperature)
+                    for length in [30, 60, 90, 120]:
+                        sentence = generate_sentence(model, dataset, temperature, length)
+                        with open(config.save_generated_text, 'a') as file:
+                            file.write("{};{};{};{}\n".format(step, temperature, length, sentence))
+
+            if step % config.save_every == 0:
+                torch.save(model.state_dict(), config.save_model)
 
             if step == config.train_steps:
-                torch.save(model.state_dict(), config.save_file)
+                # save only the model parameters
+                torch.save(model.state_dict(), config.save_model)
                 # If you receive a PyTorch data-loader error, check this bug report:
                 # https://github.com/pytorch/pytorch/pull/9655
                 break
 
-    # save only the model parameters
-
     # revive the model
     # model = TextGenerationModel(config.batch_size, config.seq_length, dataset.vocab_size(),
     #                                 config.lstm_num_hidden, config.lstm_num_layers, device)
-    # model.load_state_dict(torch.load(config.save_file))
+    # model.load_state_dict(torch.load(config.save_model))
 
     print('Done training.')
 
@@ -180,8 +186,10 @@ if __name__ == "__main__":
     parser.add_argument('--summary_path', type=str, default="./summaries/", help='Output path for summaries')
     parser.add_argument('--print_every', type=int, default=5, help='How often to print training progress')
     parser.add_argument('--sample_every', type=int, default=100, help='How often to sample from the model')
+    parser.add_argument('--save_every', type=int, default=500, help='How often to save the model')
 
-    parser.add_argument('--save_file', type=str, default="./outputs/saved_model.pt", help="Path to a .txt file to save the model on")
+    parser.add_argument('--save_model', type=str, default="./outputs/saved_model.pt", help="Path to a file to save the model on")
+    parser.add_argument('--save_generated_text', type=str, default="./outputs/save_generated_text.txt",help="Path to file to save the generted text")
     parser.add_argument('--device', type=str, default="cuda:0", help="Training device 'cpu' or 'cuda:0'")
 
     config = parser.parse_args()

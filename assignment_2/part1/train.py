@@ -34,9 +34,7 @@ from lstm import LSTM
 
 # You may want to look into tensorboardX for logging
 # from tensorboardX import SummaryWriter
-
 ################################################################################
-
 def accuracy_(predictions, targets):
 
     predicted_labels = predictions.argmax(dim=1)
@@ -97,13 +95,11 @@ def train(config):
         examples_per_second = config.batch_size/float(t2-t1)
 
         if step % 10 == 0:
-
-            print("[{}] Train Step {:04d}/{:04d}, Batch Size = {}, Examples/Sec = {:.2f}, "
-                  "Accuracy = {:.2f}, Loss = {:.3f}".format(
-                    datetime.now().strftime("%Y-%m-%d %H:%M"), step,
-                    config.train_steps, config.batch_size, examples_per_second,
-                    accuracy, loss
-            ))
+            with open(config.save_logs, 'a') as file:
+                file = "[{}] Train Step {:04d}/{:04d}, Batch Size = {}, Examples/Sec = {:.2f}, Accuracy = {:.2f}, Loss = {:.3f}".format(
+                        datetime.now().strftime("%Y-%m-%d %H:%M"), step,
+                        config.train_steps, config.batch_size, examples_per_second,
+                        accuracy, loss)
 
         if step == config.train_steps or old_loss == loss.item(): # stop if two consecutive losses remain consistent
             # If you receive a PyTorch data-loader error, check this bug report:
@@ -134,8 +130,12 @@ if __name__ == "__main__":
     parser.add_argument('--train_steps', type=int, default=10000, help='Number of training steps')
     parser.add_argument('--max_norm', type=float, default=10.0)
     parser.add_argument('--device', type=str, default="cuda:0", help="Training device 'cpu' or 'cuda:0'")
+    parser.add_argument('--save_logs', type=str, default="./outputs/logs.txt", help="Path to a file to save the model on")
 
     config = parser.parse_args()
 
     # Train the model
-    train(config)
+    for palindrome_length in [5, 10, 15, 20]:
+        config.input_length = palindrome_length
+        config.save_logs = './outputs/logs_Palindrome' + str(palindrome_length) + '.txt'
+        train(config)

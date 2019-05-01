@@ -80,7 +80,7 @@ def train(config):
 
     # Initialize the model that we are going to use
     model = TextGenerationModel(config.batch_size, config.seq_length, dataset.vocab_size,
-                                config.lstm_num_hidden, config.lstm_num_layers, device)
+                                config.lstm_num_hidden, config.lstm_num_layers, 1-config.dropout_keep_prob, device)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.RMSprop(model.parameters(), lr=config.learning_rate)
@@ -175,15 +175,15 @@ if __name__ == "__main__":
     # It is not necessary to implement the following three params, but it may help training.
     parser.add_argument('--learning_rate_decay', type=float, default=0.96, help='Learning rate decay fraction')
     parser.add_argument('--learning_rate_step', type=int, default=5000, help='Learning rate step')
-    parser.add_argument('--dropout_keep_prob', type=float, default=1.0, help='Dropout keep probability')
+    parser.add_argument('--dropout_keep_prob', type=float, default=0.97, help='Dropout keep probability')
 
-    parser.add_argument('--train_steps', type=int, default=1e6, help='Number of training steps')
+    parser.add_argument('--train_steps', type=int, default=1e5, help='Number of training steps')
     parser.add_argument('--max_norm', type=float, default=5.0, help='--')
 
     # Misc params
     parser.add_argument('--summary_path', type=str, default="./summaries/", help='Output path for summaries')
-    parser.add_argument('--print_every', type=int, default=5, help='How often to print training progress')
-    parser.add_argument('--sample_every', type=int, default=100, help='How often to sample from the model')
+    parser.add_argument('--print_every', type=int, default=500, help='How often to print training progress')
+    parser.add_argument('--sample_every', type=int, default=1000, help='How often to sample from the model')
     parser.add_argument('--save_every', type=int, default=500, help='How often to save the model')
 
     parser.add_argument('--save_model', type=str, default="./outputs/saved_model.pt", help="Path to a file to save the model on")

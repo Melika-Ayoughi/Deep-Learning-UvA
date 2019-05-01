@@ -41,7 +41,8 @@ class LSTM(nn.Module):
             nn.init.kaiming_normal_(self.params['W_' + gate + 'h'])
             self.params['b_' + gate] = nn.Parameter(torch.zeros(1, num_hidden))
 
-        self.params['W_ph'] = nn.Parameter(0.1 * torch.randn(num_hidden, num_classes))
+        self.params['W_ph'] = nn.Parameter(torch.empty(num_hidden, num_classes))
+        nn.init.kaiming_normal_(self.params['W_ph'])
         self.params['b_p'] = nn.Parameter(torch.zeros(1, num_classes))
 
         self.tanh_activation = nn.Tanh()

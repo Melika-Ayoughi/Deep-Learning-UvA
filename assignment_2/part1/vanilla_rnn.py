@@ -34,9 +34,12 @@ class VanillaRNN(nn.Module):
         self.device = device
 
         self.params = nn.ParameterDict()
-        self.params['W_hx'] = nn.Parameter(0.01 * torch.randn(input_dim, num_hidden))
-        self.params['W_hh'] = nn.Parameter(0.01 * torch.randn(num_hidden, num_hidden))
-        self.params['W_ph'] = nn.Parameter(0.01 * torch.randn(num_hidden, num_classes))
+        self.params['W_hx'] = nn.Parameter(torch.empty(input_dim, num_hidden))
+        self.params['W_hh'] = nn.Parameter(torch.empty(num_hidden, num_hidden))
+        self.params['W_ph'] = nn.Parameter(torch.empty(num_hidden, num_classes))
+        nn.init.kaiming_normal_(self.params['W_hx'])
+        nn.init.kaiming_normal_(self.params['W_hh'])
+        nn.init.kaiming_normal_(self.params['W_ph'])
         self.params['b_h'] = nn.Parameter(torch.zeros(1, num_hidden))
         self.params['b_p'] = nn.Parameter(torch.zeros(1, num_classes))
 

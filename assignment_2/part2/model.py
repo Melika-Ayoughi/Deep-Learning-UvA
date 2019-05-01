@@ -23,7 +23,7 @@ import torch
 
 class TextGenerationModel(nn.Module):
 
-    def __init__(self, batch_size, seq_length, vocabulary_size, lstm_num_hidden=256, lstm_num_layers=2, device='cuda:0'):
+    def __init__(self, batch_size, seq_length, vocabulary_size, lstm_num_hidden=256, lstm_num_layers=2, dropout=0, device='cuda:0'):
 
         super(TextGenerationModel, self).__init__()
         self.batch_size = batch_size
@@ -31,7 +31,7 @@ class TextGenerationModel(nn.Module):
 
         self.embed = nn.Embedding(vocabulary_size, vocabulary_size, _weight=torch.eye(vocabulary_size))
         self.embed.weight.requires_grad = False #don't learn the embeddings
-        self.LSTM = nn.LSTM(input_size=vocabulary_size, hidden_size=lstm_num_hidden, num_layers=lstm_num_layers, dropout=0)
+        self.LSTM = nn.LSTM(input_size=vocabulary_size, hidden_size=lstm_num_hidden, num_layers=lstm_num_layers, dropout=dropout)
         self.linear = nn.Linear(lstm_num_hidden, vocabulary_size)
         self.to(device)
 

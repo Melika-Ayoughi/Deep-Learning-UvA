@@ -52,10 +52,10 @@ def accuracy_(predictions, targets):
 
     return ((predicted_labels == target_labels).float()).mean()
 
-def generate_sentence(model, dataset, temperature, length):
+def generate_sentence(model, dataset, temperature, length, device):
     #start with a random char, input it to the network and get output
 
-    rand_char = torch.randint(0, dataset.vocab_size, (1, 1))
+    rand_char = torch.randint(0, dataset.vocab_size, (1, 1), device=device)
 
     generated_sequence = []
     with torch.no_grad():
@@ -133,7 +133,7 @@ def train(config):
 
                 for temperature in [0, 0.5, 1, 2]:
                     for length in [30, 60, 90, 120]:
-                        sentence = generate_sentence(model, dataset, temperature, length)
+                        sentence = generate_sentence(model, dataset, temperature, length, config.device)
                         with open(config.save_generated_text, 'a') as file:
                             file.write("{};{};{};{}\n".format(step, temperature, length, sentence))
 

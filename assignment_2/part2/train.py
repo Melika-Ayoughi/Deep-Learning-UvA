@@ -55,17 +55,15 @@ def accuracy_(predictions, targets):
 def generate_sentence(model, dataset, temperature, length, device):
     #start with a random char, input it to the network and get output
 
-    rand_char = torch.randint(0, dataset.vocab_size, (1, 1), device=device)
+    predicted_char = torch.randint(0, dataset.vocab_size, (1, 1), device=device)
 
     generated_sequence = []
     with torch.no_grad():
-        predicted_char = rand_char
         h_0_c_0 = None
 
         for i in range(length):
-            predicted_char, h_0_c_0 = model.forward(predicted_char, h_0_c_0)
-            predicted_char = sample_next_char(predicted_char.squeeze(), temperature)
-            predicted_char = torch.tensor([[predicted_char]])
+            predicted_seq, h_0_c_0 = model.forward(predicted_char, h_0_c_0)
+            predicted_char[0, 0] = sample_next_char(predicted_seq.squeeze(), temperature)
             generated_sequence.append(predicted_char.item())
 
     print(dataset.convert_to_string(generated_sequence))

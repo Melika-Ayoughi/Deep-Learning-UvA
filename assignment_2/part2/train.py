@@ -133,7 +133,7 @@ def train(config):
 
                 for temperature in [0, 0.5, 1, 2]:
                     for length in [30, 60, 90, 120]:
-                        sentence = generate_sentence(model, dataset, temperature, length, config.device)
+                        sentence = generate_sentence(model, dataset, temperature, length, device)
                         with open(config.save_generated_text, 'a') as file:
                             file.write("{};{};{};{}\n".format(step, temperature, length, sentence))
 

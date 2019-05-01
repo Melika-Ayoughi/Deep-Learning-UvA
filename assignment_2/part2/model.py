@@ -35,9 +35,9 @@ class TextGenerationModel(nn.Module):
         self.linear = nn.Linear(lstm_num_hidden, vocabulary_size)
         self.to(device)
 
-    def forward(self, x):
+    def forward(self, x, h_0_c_0=None):
         # assert x.shape == (self.seq_length, self.batch_size)
         x_embedding = self.embed(x)
 
-        output, (hn, cn) = self.LSTM(x_embedding) #h0 and c0 are by default initialized to zero
-        return self.linear(output)
+        output, (hn, cn) = self.LSTM(x_embedding, h_0_c_0) #h0 and c0 are by default initialized to zero
+        return self.linear(output), (hn, cn)

@@ -18,6 +18,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import sys
 import time
 from datetime import datetime
 import argparse
@@ -34,12 +35,54 @@ from dataset import TextDataset
 from model import TextGenerationModel
 
 ################################################################################
+def sample_next_char(predicted_char, temperature):
+
+    if temperature == 0:
+        return predicted_char.argmax()
+
+    distribution = predicted_char / temperature
+    distribution = torch.softmax(distribution, dim=0)
+
+    return torch.multinomial(distribution, 1)
+
 def accuracy_(predictions, targets):
 
     predicted_labels = predictions.argmax(dim=1)
     target_labels = targets
 
     return ((predicted_labels == target_labels).float()).mean()
+
+def generate_sentence(model, dataset):
+    #start with a random char, input it to the network and get output
+
+    # T = [0, 0.5, 1, 2]
+    T = 0
+    rand_char = torch.randint(0, dataset.vocab_size, (1, 1))
+
+    generated_sequence = []
+    with torch.no_grad():
+        predicted_char = rand_char
+        h_0_c_0 = None
+        # predicted_chars = [rand_char] *len(T) # start with the same characters
+        # h_0_c_0 = [None] * len(T)
+
+        for i in range(30):
+            predicted_char, h_0_c_0 = model.forward(predicted_char, h_0_c_0)
+            predicted_char = predicted_char.argmax()
+            predicted_char = torch.tensor([[predicted_char]])
+            generated_sequence.append(predicted_char.item())
+            # for j, temperature in enumerate(T):
+            #     predicted_chars[j], h_0_c_0[j] = model.forward(predicted_chars[j], h_0_c_0[j])
+            #     predicted_chars[j] = sample_next_char(predicted_chars[j], temperature)
+            #     predicted_chars[j] = torch.tensor([[predicted_chars[j]]])
+            # generated_sequence.append(predicted_chars)
+
+
+    print(dataset.convert_to_string(generated_sequence))
+    return dataset.convert_to_string(generated_sequence)
+    # print([dataset.convert_to_string(k) for k in np.stack(generated_sequence, axis=1)])
+    # return [dataset.convert_to_string(k) for k in np.stack(generated_sequence, axis=1)]
+
 
 def train(config):
 
@@ -59,51 +102,54 @@ def train(config):
 
     losses = []
     accuracies = []
-    for step, (batch_inputs, batch_targets) in enumerate(data_loader):
 
-        # Only for time measurement of step through network
-        t1 = time.time()
+    # run through the dataset several times till u reach max_steps
+    step = 0
+    while step < config.train_steps:
+        for (batch_inputs, batch_targets) in data_loader:
+            step += 1
+            # Only for time measurement of step through network
+            t1 = time.time()
 
-        batch_inputs = torch.stack(batch_inputs).to(device)
-        batch_targets = torch.stack(batch_targets, dim=1).to(device) #dim=1 to avoid transposing
+            batch_inputs = torch.stack(batch_inputs).to(device)
+            batch_targets = torch.stack(batch_targets, dim=1).to(device) #dim=1 to avoid transposing
 
-        batch_predictions = model.forward(batch_inputs)
-        batch_predictions = batch_predictions.permute(1, 2, 0)
-        loss = criterion(batch_predictions, batch_targets)
-        losses.append(loss.item())
-        model.zero_grad()  # should we do this??
-        loss.backward()
+            batch_predictions, (_,_) = model.forward(batch_inputs)
+            batch_predictions = batch_predictions.permute(1, 2, 0)
+            loss = criterion(batch_predictions, batch_targets)
+            losses.append(loss.item())
+            model.zero_grad()  # should we do this??
+            loss.backward()
 
-        torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=config.max_norm)  # prevents maximum gradient problem
+            torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=config.max_norm)  # prevents maximum gradient problem
 
-        optimizer.step()  # before or after clip_grad_norm?
+            optimizer.step()
 
-        accuracy = accuracy_(batch_predictions, batch_targets)
-        accuracies.append(accuracy)
+            accuracy = accuracy_(batch_predictions, batch_targets)
+            accuracies.append(accuracy)
 
 
-        # Just for time measurement
-        t2 = time.time()
-        examples_per_second = config.batch_size/float(t2-t1)
+            # Just for time measurement
+            t2 = time.time()
+            examples_per_second = config.batch_size/float(t2-t1)
 
-        if step % config.print_every == 0:
+            if step % config.print_every == 0:
 
-            print("[{}] Train Step {}/{}, Batch Size = {}, Examples/Sec = {:.2f}, "
-                  "Accuracy = {:.2f}, Loss = {:.3f}".format(
-                    datetime.now().strftime("%Y-%m-%d %H:%M"), int(step),
-                    int(config.train_steps), config.batch_size, examples_per_second,
-                    accuracy, loss
-            ))
+                print("[{}] Train Step {}/{}, Batch Size = {}, Examples/Sec = {:.2f}, "
+                      "Accuracy = {:.2f}, Loss = {:.3f}".format(
+                        datetime.now().strftime("%Y-%m-%d %H:%M"), int(step),
+                        int(config.train_steps), config.batch_size, examples_per_second,
+                        accuracy, loss
+                ))
 
-        if step % config.sample_every == 0:
-            # Generate some sentences by sampling from the model
-            pass
+            if step % config.sample_every == 0:
+                sentences = generate_sentence(model, dataset)
 
-        if step == config.train_steps:
-            torch.save(model.state_dict(), config.save_file)
-            # If you receive a PyTorch data-loader error, check this bug report:
-            # https://github.com/pytorch/pytorch/pull/9655
-            break
+            if step == config.train_steps:
+                torch.save(model.state_dict(), config.save_file)
+                # If you receive a PyTorch data-loader error, check this bug report:
+                # https://github.com/pytorch/pytorch/pull/9655
+                break
 
     # save only the model parameters
 

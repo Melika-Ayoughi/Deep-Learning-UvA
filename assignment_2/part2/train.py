@@ -52,37 +52,24 @@ def accuracy_(predictions, targets):
 
     return ((predicted_labels == target_labels).float()).mean()
 
-def generate_sentence(model, dataset):
+def generate_sentence(model, dataset, temperature):
     #start with a random char, input it to the network and get output
 
-    # T = [0, 0.5, 1, 2]
-    T = 0
     rand_char = torch.randint(0, dataset.vocab_size, (1, 1))
 
     generated_sequence = []
     with torch.no_grad():
         predicted_char = rand_char
         h_0_c_0 = None
-        # predicted_chars = [rand_char] *len(T) # start with the same characters
-        # h_0_c_0 = [None] * len(T)
 
         for i in range(30):
             predicted_char, h_0_c_0 = model.forward(predicted_char, h_0_c_0)
-            predicted_char = predicted_char.argmax()
+            predicted_char = sample_next_char(predicted_char.squeeze(), temperature)
             predicted_char = torch.tensor([[predicted_char]])
             generated_sequence.append(predicted_char.item())
-            # for j, temperature in enumerate(T):
-            #     predicted_chars[j], h_0_c_0[j] = model.forward(predicted_chars[j], h_0_c_0[j])
-            #     predicted_chars[j] = sample_next_char(predicted_chars[j], temperature)
-            #     predicted_chars[j] = torch.tensor([[predicted_chars[j]]])
-            # generated_sequence.append(predicted_chars)
-
 
     print(dataset.convert_to_string(generated_sequence))
     return dataset.convert_to_string(generated_sequence)
-    # print([dataset.convert_to_string(k) for k in np.stack(generated_sequence, axis=1)])
-    # return [dataset.convert_to_string(k) for k in np.stack(generated_sequence, axis=1)]
-
 
 def train(config):
 
@@ -143,7 +130,8 @@ def train(config):
                 ))
 
             if step % config.sample_every == 0:
-                sentences = generate_sentence(model, dataset)
+                for temperature in [0, 0.5, 1, 2]:
+                    sentence = generate_sentence(model, dataset, temperature)
 
             if step == config.train_steps:
                 torch.save(model.state_dict(), config.save_file)

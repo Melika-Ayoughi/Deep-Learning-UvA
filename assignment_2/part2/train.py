@@ -66,7 +66,7 @@ def generate_sentence(model, dataset, temperature, length, device):
             predicted_char[0, 0] = sample_next_char(predicted_seq.squeeze(), temperature)
             generated_sequence.append(predicted_char.item())
 
-    print(dataset.convert_to_string(generated_sequence))
+    # print(dataset.convert_to_string(generated_sequence))
     return dataset.convert_to_string(generated_sequence)
 
 def train(config):
@@ -132,7 +132,7 @@ def train(config):
                 for temperature in [0, 0.5, 1, 2]:
                     for length in [30, 60, 90, 120]:
                         sentence = generate_sentence(model, dataset, temperature, length, device)
-                        with open(config.save_generated_text, 'a') as file:
+                        with open(config.save_generated_text, 'a', encoding='utf-8') as file:
                             file.write("{};{};{};{}\n".format(step, temperature, length, sentence))
 
             if step % config.save_every == 0:

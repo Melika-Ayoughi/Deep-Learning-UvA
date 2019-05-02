@@ -186,8 +186,8 @@ if __name__ == "__main__":
     parser.add_argument('--sample_every', type=int, default=1000, help='How often to sample from the model')
     parser.add_argument('--save_every', type=int, default=500, help='How often to save the model')
 
-    parser.add_argument('--save_model', type=str, default="./outputs/saved_model.pt", help="Path to a file to save the model on")
-    parser.add_argument('--save_generated_text', type=str, default="./outputs/save_generated_text.txt",help="Path to file to save the generted text")
+    parser.add_argument('--save_model', type=str, default="./saved_model.pt", help="Path to a file to save the model on")
+    parser.add_argument('--save_generated_text', type=str, default="./save_generated_text.txt",help="Path to file to save the generted text")
     parser.add_argument('--device', type=str, default="cuda:0", help="Training device 'cpu' or 'cuda:0'")
 
     config = parser.parse_args()

@@ -96,10 +96,10 @@ def train(config):
 
         if step % 10 == 0:
             with open(config.save_logs, 'a') as file:
-                file = "[{}] Train Step {:04d}/{:04d}, Batch Size = {}, Examples/Sec = {:.2f}, Accuracy = {:.2f}, Loss = {:.3f}".format(
+                file.write("[{}] Train Step {:04d}/{:04d}, Batch Size = {}, Examples/Sec = {:.2f}, Accuracy = {:.2f}, Loss = {:.3f}".format(
                         datetime.now().strftime("%Y-%m-%d %H:%M"), step,
                         config.train_steps, config.batch_size, examples_per_second,
-                        accuracy, loss)
+                        accuracy, loss) +'\n')
 
         if step == config.train_steps or old_loss == loss.item(): # stop if two consecutive losses remain consistent
             # If you receive a PyTorch data-loader error, check this bug report:
@@ -130,12 +130,15 @@ if __name__ == "__main__":
     parser.add_argument('--train_steps', type=int, default=10000, help='Number of training steps')
     parser.add_argument('--max_norm', type=float, default=10.0)
     parser.add_argument('--device', type=str, default="cuda:0", help="Training device 'cpu' or 'cuda:0'")
-    parser.add_argument('--save_logs', type=str, default="./outputs/logs.txt", help="Path to a file to save the model on")
+    parser.add_argument('--save_logs', type=str, default="./logs.txt", help="Path to a file to save the logs on")
 
     config = parser.parse_args()
 
     # Train the model
     for palindrome_length in [5, 10, 15, 20]:
-        config.input_length = palindrome_length
-        config.save_logs = './outputs/logs_Palindrome' + str(palindrome_length) + '.txt'
-        train(config)
+        for i in range(5):
+            for model in ['RNN', 'LSTM']:
+                config.input_length = palindrome_length
+                config.model_type = model
+                config.save_logs = './logs_'+ config.model_type +'_length' + str(palindrome_length) + '_iteration_' + str(i) + '.txt'
+                train(config)

@@ -76,6 +76,7 @@ def train(config):
 
     # Initialize the dataset and data loader (note the +1)
     dataset = TextDataset(config.txt_file, config.seq_length) # should we do +1??
+    torch.save(dataset, config.save_dataset)
     data_loader = DataLoader(dataset, config.batch_size, num_workers=1)
 
     # Initialize the model that we are going to use
@@ -129,7 +130,7 @@ def train(config):
 
             if step % config.sample_every == 0:
 
-                for temperature in [0, 0.5, 1, 2]:
+                for temperature in [0]:
                     for length in [30, 60, 90, 120]:
                         sentence = generate_sentence(model, dataset, temperature, length, device)
                         with open(config.save_generated_text, 'a', encoding='utf-8') as file:
@@ -187,6 +188,7 @@ if __name__ == "__main__":
     parser.add_argument('--save_every', type=int, default=500, help='How often to save the model')
 
     parser.add_argument('--save_model', type=str, default="./saved_model.pt", help="Path to a file to save the model on")
+    parser.add_argument('--save_dataset', type=str, default="./saved_dataset.dataset",help="Path to a file to save the model on")
     parser.add_argument('--save_generated_text', type=str, default="./save_generated_text.txt",help="Path to file to save the generted text")
     parser.add_argument('--device', type=str, default="cuda:0", help="Training device 'cpu' or 'cuda:0'")
 

@@ -135,7 +135,7 @@ if __name__ == "__main__":
     config = parser.parse_args()
 
     # Train the model
-    for palindrome_length in [15, 20]:
+    for palindrome_length in [5, 10, 15, 20]:
         for i in range(5):
             for model in ['RNN', 'LSTM']:
                 config.input_length = palindrome_length

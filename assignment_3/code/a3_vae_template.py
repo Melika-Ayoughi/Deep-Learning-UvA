@@ -3,6 +3,10 @@ import argparse
 import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
+import numpy as np
+import time
+from datetime import datetime
+import numpy.linalg.det as det
 from torchvision.utils import make_grid
 
 from datasets.bmnist import bmnist
@@ -10,8 +14,12 @@ from datasets.bmnist import bmnist
 
 class Encoder(nn.Module):
 
-    def __init__(self, hidden_dim=500, z_dim=20):
+    def __init__(self, input_dim, hidden_dim=500, z_dim=20):
         super().__init__()
+        # a gaussian encoder
+        self.hidden = nn.Linear(input_dim, hidden_dim)
+        self.mean = nn.Linear(hidden_dim, z_dim) # is this correct? mapping the same hidden layer to both mean and std
+        self.std = nn.Linear(hidden_dim, z_dim)
 
     def forward(self, input):
         """
@@ -20,16 +28,22 @@ class Encoder(nn.Module):
         Returns mean and std with shape [batch_size, z_dim]. Make sure
         that any constraints are enforced.
         """
-        mean, std = None, None
-        raise NotImplementedError()
-
+        h = torch.tanh(self.hidden(input))
+        mean, std = self.mean(h), self.std(h)
         return mean, std
 
 
 class Decoder(nn.Module):
 
-    def __init__(self, hidden_dim=500, z_dim=20):
+    def __init__(self, input_dim, hidden_dim=500, z_dim=20):
         super().__init__()
+        # a bernoulli decoder
+        self.decode = nn.Sequential(
+            nn.Linear(z_dim, hidden_dim),
+            nn.Tanh(),
+            nn.Linear(hidden_dim, input_dim),
+            nn.Sigmoid()
+        )
 
     def forward(self, input):
         """
@@ -37,28 +51,38 @@ class Decoder(nn.Module):
 
         Returns mean with shape [batch_size, 784].
         """
-        mean = None
-        raise NotImplementedError()
-
+        mean = self.decode(input)
         return mean
 
 
 class VAE(nn.Module):
 
-    def __init__(self, hidden_dim=500, z_dim=20):
+    def __init__(self, input_dim, hidden_dim=500, z_dim=20):
         super().__init__()
 
         self.z_dim = z_dim
-        self.encoder = Encoder(hidden_dim, z_dim)
-        self.decoder = Decoder(hidden_dim, z_dim)
+        self.encoder = Encoder(input_dim, hidden_dim, z_dim)
+        self.decoder = Decoder(input_dim, hidden_dim, z_dim)
 
     def forward(self, input):
         """
         Given input, perform an encoding and decoding step and return the
         negative average elbo for the given batch.
         """
-        average_negative_elbo = None
-        raise NotImplementedError()
+
+        mean, std = self.encoder.forward(input)
+        epsilon = np.random.standard_normal(1) #check dimensions!
+        z = std * epsilon + mean
+        y = self.decoder.forward(z)
+
+        l_reconstruction = - (input * torch.log(y) + (1-input) * (1-torch.log(y))) # check dimensions! check sign! dot product?
+        variance = std**2
+
+        # trace = sum(variance) sum of diagonal
+        l_regularize = 0.5 * (-torch.log(np.product(variance)) + np.sum(variance) + mean**2 - len(mean))
+
+
+        average_negative_elbo = l_reconstruction + l_regularize
         return average_negative_elbo
 
     def sample(self, n_samples):
@@ -80,10 +104,23 @@ def epoch_iter(model, data, optimizer):
 
     Returns the average elbo for the complete epoch.
     """
-    average_epoch_elbo = None
-    raise NotImplementedError()
+    average_epoch_elbo = []
 
-    return average_epoch_elbo
+    for step, batch in enumerate(data):
+        t1 = time.time()
+        elbo = model.forward(batch)
+
+        if model.training:
+            model.zero_grad()
+            elbo.backward()
+            torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=10)  # prevents maximum gradient problem
+            optimizer.step()
+        average_epoch_elbo.append(elbo)
+
+        if step % 10 == 0:
+            print("[{}] Loss = {} ".format(datetime.now().strftime("%Y-%m-%d %H:%M"), elbo) + '\n')
+        t2 = time.time()
+    return np.mean(average_epoch_elbo)
 
 
 def run_epoch(model, data, optimizer):
@@ -114,7 +151,8 @@ def save_elbo_plot(train_curve, val_curve, filename):
 
 def main():
     data = bmnist()[:2]  # ignore test split
-    model = VAE(z_dim=ARGS.zdim)
+    # 28 is image dimension
+    model = VAE(28*28, hidden_dim=ARGS.h_dim, z_dim=ARGS.zdim)
     optimizer = torch.optim.Adam(model.parameters())
 
     train_curve, val_curve = [], []
@@ -145,6 +183,8 @@ if __name__ == "__main__":
                         help='max number of epochs')
     parser.add_argument('--zdim', default=20, type=int,
                         help='dimensionality of latent space')
+    parser.add_argument('--h_dim', default=500, type=int,
+                        help='dimensionality of hidden space')
 
     ARGS = parser.parse_args()
 

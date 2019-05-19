@@ -3,10 +3,8 @@ import argparse
 import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
-import numpy as np
 import time
 from datetime import datetime
-import numpy.linalg.det as det
 from torchvision.utils import make_grid
 
 from datasets.bmnist import bmnist
@@ -18,7 +16,7 @@ class Encoder(nn.Module):
         super().__init__()
         # a gaussian encoder
         self.hidden = nn.Linear(input_dim, hidden_dim)
-        self.mean = nn.Linear(hidden_dim, z_dim) # is this correct? mapping the same hidden layer to both mean and std
+        self.mean = nn.Linear(hidden_dim, z_dim)
         self.std = nn.Linear(hidden_dim, z_dim)
 
     def forward(self, input):
@@ -29,8 +27,7 @@ class Encoder(nn.Module):
         that any constraints are enforced.
         """
         h = torch.tanh(self.hidden(input))
-        mean, std = self.mean(h), self.std(h)
-        return mean, std
+        return self.mean(h), self.std(h)
 
 
 class Decoder(nn.Module):
@@ -71,18 +68,17 @@ class VAE(nn.Module):
         """
 
         mean, std = self.encoder.forward(input)
-        epsilon = np.random.standard_normal(1) #check dimensions!
+        epsilon = torch.zeros(mean.shape).normal_() #check dimensions!
+
         z = std * epsilon + mean
         y = self.decoder.forward(z)
 
         l_reconstruction = - (input * torch.log(y) + (1-input) * (1-torch.log(y))) # check dimensions! check sign! dot product?
-        variance = std**2
 
-        # trace = sum(variance) sum of diagonal
-        l_regularize = 0.5 * (-torch.log(np.product(variance)) + np.sum(variance) + mean**2 - len(mean))
+        l_regularize = torch.log(std) + 0.5 * (std**2 + mean**2) - 0.5
 
 
-        average_negative_elbo = l_reconstruction + l_regularize
+        average_negative_elbo = torch.mean(torch.sum(l_reconstruction) + torch.sum(l_regularize))
         return average_negative_elbo
 
     def sample(self, n_samples):
@@ -108,6 +104,8 @@ def epoch_iter(model, data, optimizer):
 
     for step, batch in enumerate(data):
         t1 = time.time()
+
+        batch = batch.reshape(batch.shape[0], -1) #batch = [128, 784=28*28] column known, row unknown
         elbo = model.forward(batch)
 
         if model.training:

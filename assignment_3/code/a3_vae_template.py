@@ -3,6 +3,9 @@ import argparse
 import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
+import matplotlib.image as matimage
+
+
 import time
 from datetime import datetime
 import numpy as np
@@ -29,11 +32,8 @@ class Encoder(nn.Module):
         that any constraints are enforced.
         """
         h = torch.tanh(self.hidden(input))
-        mean, std = self.mean(h), self.log_std(h)
-        # if (mean.shape != (128, self.z_dim) or std.shape != (128, self.z_dim)):
-        #     print(mean.shape, std.shape)
-        # assert (mean.shape == (128, self.z_dim) or std.shape == (128, self.z_dim))
-        return mean, std
+        mean, log_std = self.mean(h), self.log_std(h)
+        return mean, log_std
 
 
 class Decoder(nn.Module):
@@ -55,9 +55,6 @@ class Decoder(nn.Module):
         Returns mean with shape [batch_size, 784].
         """
         mean = self.decode(input)
-        if(mean.shape!=(128,784)):
-            print(mean.shape)
-        # assert mean.shape == (128, 784)
         return mean
 
 
@@ -76,17 +73,16 @@ class VAE(nn.Module):
         negative average elbo for the given batch.
         """
 
-        mean, std = self.encoder.forward(input)
-        # std = 2**log_std
-        epsilon = torch.zeros(mean.shape).normal_() #check dimensions!
+        mean, log_var = self.encoder.forward(input)
+        var = 2**log_var
+        epsilon = torch.zeros(mean.shape).normal_() # we cannot use z_dim because we're using batches
 
-        z = std * epsilon + mean
+        z = torch.sqrt(var) * epsilon + mean
         y = self.decoder.forward(z)
 
-        # print(std)
-        l_reconstruction = - (input * torch.log(y) + (1-input) * torch.log(1-y) ) # check dimensions! check sign! dot product?
+        l_reconstruction = - (input * torch.log(y) + (1-input) * torch.log(1-y) )
 
-        l_regularize = 2**std + 0.5 * (std**2 + mean**2 - 1)
+        l_regularize = 0.5 * (-log_var + var + mean**2 - 1)
         # l_regularize = 0.5 * (torch.log(std**2) + std ** 2 + mean ** 2 - 1)
 
         average_negative_elbo = torch.mean(torch.sum(l_reconstruction, dim=1) + torch.sum(l_regularize, dim=1))
@@ -98,10 +94,13 @@ class VAE(nn.Module):
         (from bernoulli) and the means for these bernoullis (as these are
         used to plot the data manifold).
         """
-        sampled_ims, im_means = None, None
-        raise NotImplementedError()
+        samples = torch.zeros(n_samples, self.z_dim).normal_()
 
-        return sampled_ims, im_means
+        # Careful! Do not update the weights
+        with torch.no_grad():
+            img_means = self.decoder(samples)
+        sampled_imgs = (torch.rand(img_means.shape) < img_means)
+        return sampled_imgs, img_means
 
 
 def epoch_iter(model, data, optimizer):
@@ -126,7 +125,7 @@ def epoch_iter(model, data, optimizer):
             optimizer.step()
         average_epoch_elbo.append(elbo.item())
 
-        if step % 10 == 0:
+        if step % ARGS.print_every == 0:
             print("[{}] Loss = {} ".format(datetime.now().strftime("%Y-%m-%d %H:%M"), elbo) + '\n')
         t2 = time.time()
     return np.mean(average_epoch_elbo)
@@ -172,6 +171,13 @@ def main():
         val_curve.append(val_elbo)
         print(f"[Epoch {epoch}] train elbo: {train_elbo} val_elbo: {val_elbo}")
 
+        imgs, means = model.sample(n_samples=ARGS.n_samples)
+        imgs = imgs.reshape(-1, 1, 28, 28) # reshape the data to [n_samples, 1, 28, 28]
+
+        grid = make_grid(imgs, nrow=4, padding=2, normalize=True).numpy().astype(np.float).transpose(1, 2, 0)
+        matimage.imsave(f"grid_Epoch{epoch}.png", grid)
+
+        # show(make_grid(imgs.reshape(), nrow=torch.sqrt(ARGS.n_samples), padding=2))#, normalize=False)
         # --------------------------------------------------------------------
         #  Add functionality to plot samples from model during training.
         #  You can use the make_grid functioanlity that is already imported.
@@ -194,7 +200,10 @@ if __name__ == "__main__":
                         help='dimensionality of latent space')
     parser.add_argument('--h_dim', default=500, type=int,
                         help='dimensionality of hidden space')
-
+    parser.add_argument('--n_samples', default=16, type=int,
+                        help='number of samples')
+    parser.add_argument('--print_every', default=100, type=int,
+                        help='print every step')
     ARGS = parser.parse_args()
 
     main()

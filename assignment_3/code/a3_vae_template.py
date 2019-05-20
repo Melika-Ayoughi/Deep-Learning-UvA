@@ -5,6 +5,7 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 import time
 from datetime import datetime
+import numpy as np
 from torchvision.utils import make_grid
 
 from datasets.bmnist import bmnist
@@ -14,10 +15,11 @@ class Encoder(nn.Module):
 
     def __init__(self, input_dim, hidden_dim=500, z_dim=20):
         super().__init__()
+        self.z_dim = z_dim
         # a gaussian encoder
         self.hidden = nn.Linear(input_dim, hidden_dim)
         self.mean = nn.Linear(hidden_dim, z_dim)
-        self.std = nn.Linear(hidden_dim, z_dim)
+        self.log_std = nn.Linear(hidden_dim, z_dim)
 
     def forward(self, input):
         """
@@ -27,7 +29,11 @@ class Encoder(nn.Module):
         that any constraints are enforced.
         """
         h = torch.tanh(self.hidden(input))
-        return self.mean(h), self.std(h)
+        mean, std = self.mean(h), self.log_std(h)
+        # if (mean.shape != (128, self.z_dim) or std.shape != (128, self.z_dim)):
+        #     print(mean.shape, std.shape)
+        # assert (mean.shape == (128, self.z_dim) or std.shape == (128, self.z_dim))
+        return mean, std
 
 
 class Decoder(nn.Module):
@@ -49,6 +55,9 @@ class Decoder(nn.Module):
         Returns mean with shape [batch_size, 784].
         """
         mean = self.decode(input)
+        if(mean.shape!=(128,784)):
+            print(mean.shape)
+        # assert mean.shape == (128, 784)
         return mean
 
 
@@ -68,17 +77,19 @@ class VAE(nn.Module):
         """
 
         mean, std = self.encoder.forward(input)
+        # std = 2**log_std
         epsilon = torch.zeros(mean.shape).normal_() #check dimensions!
 
         z = std * epsilon + mean
         y = self.decoder.forward(z)
 
-        l_reconstruction = - (input * torch.log(y) + (1-input) * (1-torch.log(y))) # check dimensions! check sign! dot product?
+        # print(std)
+        l_reconstruction = - (input * torch.log(y) + (1-input) * torch.log(1-y) ) # check dimensions! check sign! dot product?
 
-        l_regularize = torch.log(std) + 0.5 * (std**2 + mean**2) - 0.5
+        l_regularize = 2**std + 0.5 * (std**2 + mean**2 - 1)
+        # l_regularize = 0.5 * (torch.log(std**2) + std ** 2 + mean ** 2 - 1)
 
-
-        average_negative_elbo = torch.mean(torch.sum(l_reconstruction) + torch.sum(l_regularize))
+        average_negative_elbo = torch.mean(torch.sum(l_reconstruction, dim=1) + torch.sum(l_regularize, dim=1))
         return average_negative_elbo
 
     def sample(self, n_samples):
@@ -111,9 +122,9 @@ def epoch_iter(model, data, optimizer):
         if model.training:
             model.zero_grad()
             elbo.backward()
-            torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=10)  # prevents maximum gradient problem
+            # torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=10)  # prevents maximum gradient problem
             optimizer.step()
-        average_epoch_elbo.append(elbo)
+        average_epoch_elbo.append(elbo.item())
 
         if step % 10 == 0:
             print("[{}] Loss = {} ".format(datetime.now().strftime("%Y-%m-%d %H:%M"), elbo) + '\n')

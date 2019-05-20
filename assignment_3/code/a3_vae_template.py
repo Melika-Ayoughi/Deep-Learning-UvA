@@ -172,9 +172,9 @@ def main():
         print(f"[Epoch {epoch}] train elbo: {train_elbo} val_elbo: {val_elbo}")
 
         imgs, means = model.sample(n_samples=ARGS.n_samples)
-        imgs = imgs.reshape(-1, 1, 28, 28) # reshape the data to [n_samples, 1, 28, 28]
-
-        grid = make_grid(imgs, nrow=4, padding=2, normalize=True).numpy().astype(np.float).transpose(1, 2, 0)
+        # imgs = imgs.reshape(-1, 1, 28, 28) # reshape the data to [n_samples, 1, 28, 28]
+        means = means.reshape(-1, 1, 28, 28)
+        grid = make_grid(means, nrow=4, padding=2, normalize=True).numpy().astype(np.float).transpose(1, 2, 0)
         matimage.imsave(f"grid_Epoch{epoch}.png", grid)
 
         # show(make_grid(imgs.reshape(), nrow=torch.sqrt(ARGS.n_samples), padding=2))#, normalize=False)

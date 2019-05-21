@@ -9,46 +9,45 @@ from torchvision import datasets
 
 
 class Generator(nn.Module):
-    def __init__(self):
+    def __init__(self, latent_dim, input_dim=784, h_dim=128):
         super(Generator, self).__init__()
+        # in the generator we go from latent space  z to input space x
 
-        # Construct generator. You are free to experiment with your model,
-        # but the following is a good start:
-        #   Linear args.latent_dim -> 128
-        #   LeakyReLU(0.2)
-        #   Linear 128 -> 256
-        #   Bnorm
-        #   LeakyReLU(0.2)
-        #   Linear 256 -> 512
-        #   Bnorm
-        #   LeakyReLU(0.2)
-        #   Linear 512 -> 1024
-        #   Bnorm
-        #   LeakyReLU(0.2)
-        #   Linear 1024 -> 768
-        #   Output non-linearity
+        self.generator = nn.Sequential(
+            nn.Linear(latent_dim, h_dim),  # latent_dim -> 128
+            nn.LeakyReLU(0.2),
+            nn.Linear(h_dim, 2 * h_dim),  # 128 -> 256
+            nn.BatchNorm1d(),
+            nn.LeakyReLU(0.2),
+            nn.Linear(2 * h_dim, 4 * h_dim),  # 256 -> 512
+            nn.BatchNorm1d(),
+            nn.LeakyReLU(0.2),
+            nn.Linear(4 * h_dim, 8 * h_dim),  # 512 -> 1024
+            nn.BatchNorm1d(),
+            nn.LeakyReLU(0.2),
+            nn.Linear(8 * h_dim, input_dim),  # 1024 -> input_dim
+            nn.Tanh()
+        )
 
     def forward(self, z):
-        # Generate images from z
-        pass
+        return self.generator(z)
 
 
 class Discriminator(nn.Module):
-    def __init__(self):
+    def __init__(self, input_dim=784, h_dim=512):
         super(Discriminator, self).__init__()
 
-        # Construct distriminator. You are free to experiment with your model,
-        # but the following is a good start:
-        #   Linear 784 -> 512
-        #   LeakyReLU(0.2)
-        #   Linear 512 -> 256
-        #   LeakyReLU(0.2)
-        #   Linear 256 -> 1
-        #   Output non-linearity
+        self.descriminator = nn.Sequential(
+            nn.Linear(input_dim, h_dim),  # input_dim -> 512
+            nn.LeakyReLU(0.2),
+            nn.Linear(h_dim, h_dim / 2),  # 512 -> 256
+            nn.LeakyReLU(0.2),
+            nn.Linear(h_dim / 2, 1),  # 256 -> 1
+            nn.Sigmoid()
+        )
 
     def forward(self, img):
-        # return discriminator score for img
-        pass
+        return self.descriminator(img)
 
 
 def train(dataloader, discriminator, generator, optimizer_G, optimizer_D):
@@ -59,6 +58,7 @@ def train(dataloader, discriminator, generator, optimizer_G, optimizer_D):
 
             # Train Generator
             # ---------------
+            with optimizer_D.no_grad:
 
             # Train Discriminator
             # -------------------
@@ -91,7 +91,7 @@ def main():
         batch_size=args.batch_size, shuffle=True)
 
     # Initialize models and optimizers
-    generator = Generator()
+    generator = Generator(args.latent_dim)
     discriminator = Discriminator()
     optimizer_G = torch.optim.Adam(generator.parameters(), lr=args.lr)
     optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=args.lr)
@@ -116,6 +116,8 @@ if __name__ == "__main__":
                         help='dimensionality of the latent space')
     parser.add_argument('--save_interval', type=int, default=500,
                         help='save every SAVE_INTERVAL iterations')
+    parser.add_argument('--device', type=str, default="cuda:0",
+                        help="Training device 'cpu' or 'cuda:0'")
     args = parser.parse_args()
 
     main()

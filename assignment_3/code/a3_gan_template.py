@@ -72,7 +72,7 @@ def train(dataloader, discriminator, generator, optimizer_G, optimizer_D, device
             D_X = discriminator.forward(imgs)
 
             # Sample
-            z = torch.randn((imgs.shape[0], generator.latent_dim))
+            z = torch.randn((imgs.shape[0], generator.latent_dim)).to(device)
             generated_img = generator.forward(z)
             D_GZ = discriminator.forward(generated_img)
 

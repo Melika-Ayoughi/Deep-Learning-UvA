@@ -9,7 +9,7 @@ import matplotlib.image as matimage
 import time
 from datetime import datetime
 import numpy as np
-from torchvision.utils import make_grid
+from torchvision.utils import make_grid, save_image
 
 from datasets.bmnist import bmnist
 
@@ -171,17 +171,17 @@ def main():
         val_curve.append(val_elbo)
         print(f"[Epoch {epoch}] train elbo: {train_elbo} val_elbo: {val_elbo}")
 
-        imgs, means = model.sample(n_samples=ARGS.n_samples)
-        # imgs = imgs.reshape(-1, 1, 28, 28) # reshape the data to [n_samples, 1, 28, 28]
-        means = means.reshape(-1, 1, 28, 28)
-        grid = make_grid(means, nrow=4, padding=2, normalize=True).numpy().astype(np.float).transpose(1, 2, 0)
-        matimage.imsave(f"grid_Epoch{epoch}.png", grid)
-
-        # show(make_grid(imgs.reshape(), nrow=torch.sqrt(ARGS.n_samples), padding=2))#, normalize=False)
         # --------------------------------------------------------------------
         #  Add functionality to plot samples from model during training.
-        #  You can use the make_grid functioanlity that is already imported.
+        #  You can use the make_grid functionality that is already imported.
         # --------------------------------------------------------------------
+
+        imgs, means = model.sample(n_samples=ARGS.n_samples)
+
+        # Only use means for better visualization
+        # Reshape the data to [n_samples, 1, 28, 28]
+        means = means.reshape(-1, 1, 28, 28)
+        save_image(means, f"grid_Epoch{epoch}.png", nrow=4, padding=2, normalize=True)
 
     # --------------------------------------------------------------------
     #  Add functionality to plot plot the learned data manifold after

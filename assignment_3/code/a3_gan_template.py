@@ -43,18 +43,20 @@ class Discriminator(nn.Module):
     def __init__(self, input_dim=784, h_dim=512, device=None):
         super(Discriminator, self).__init__()
         self.device = device
-        self.descriminator = nn.Sequential(
+        self.discriminator = nn.Sequential(
             nn.Linear(input_dim, h_dim),  # input_dim -> 512
             nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
             nn.Linear(h_dim, int(h_dim / 2)),  # 512 -> 256
             nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
             nn.Linear(int(h_dim / 2), 1),  # 256 -> 1
             nn.Sigmoid()
         )
         self.to(device)
 
     def forward(self, img):
-        return self.descriminator(img)
+        return self.discriminator(img)
 
 
 def train(dataloader, discriminator, generator, optimizer_G, optimizer_D, device):
@@ -63,11 +65,8 @@ def train(dataloader, discriminator, generator, optimizer_G, optimizer_D, device
     for epoch in range(args.n_epochs):
         losses_d, losses_g = [], []
         for step, (imgs, _) in enumerate(dataloader):
-            # imgs.cuda() # what is this?
             imgs = imgs.reshape(imgs.shape[0], -1).to(device) # [batch_size, 784] make images 1-dimensional
 
-            # Train Generator
-            # ---------------
 
             D_X = discriminator.forward(imgs)
 
@@ -82,17 +81,18 @@ def train(dataloader, discriminator, generator, optimizer_G, optimizer_D, device
             optimizer_G.zero_grad()
             optimizer_D.zero_grad()
 
+            # Train Generator
+            # ---------------
             loss_g.backward(retain_graph=True)
             optimizer_G.step()
 
+            # Train Discriminator
+            # -------------------
             loss_d.backward()
             optimizer_D.step()
 
             losses_d.append(loss_d.item())
             losses_g.append(loss_g.item())
-
-            # Train Discriminator
-            # -------------------
 
             # Save Images
             # -----------
@@ -170,7 +170,7 @@ if __name__ == "__main__":
                         help="Path to a file to save the model on")
     parser.add_argument('--n_samples', default=16, type=int,
                         help='number of samples')
-    parser.add_argument('--print_every', default=100, type=int,
+    parser.add_argument('--print_every', default=1000, type=int,
                         help='print every step')
     args = parser.parse_args()
 

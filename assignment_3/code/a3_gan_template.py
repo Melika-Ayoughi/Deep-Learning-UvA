@@ -7,6 +7,8 @@ import torchvision.transforms as transforms
 from torchvision.utils import save_image
 from torchvision import datasets
 import matplotlib.pyplot as plt
+from statistics import mean as mean_
+from datetime import datetime
 
 
 class Generator(nn.Module):
@@ -58,8 +60,7 @@ def train(dataloader, discriminator, generator, optimizer_G, optimizer_D):
     gen_curve, disc_curve = [], []
     for epoch in range(args.n_epochs):
         losses_d, losses_g = [], []
-        for i, (imgs, _) in enumerate(dataloader):
-            print(imgs.shape)
+        for step, (imgs, _) in enumerate(dataloader):
             # imgs.cuda() # what is this?
             imgs = imgs.reshape(imgs.shape[0], -1) # [batch_size, 784] make images 1-dimensional
 
@@ -78,9 +79,11 @@ def train(dataloader, discriminator, generator, optimizer_G, optimizer_D):
 
             optimizer_G.zero_grad()
             optimizer_D.zero_grad()
-            loss_d.backward()
-            loss_g.backward()
+
+            loss_g.backward(retain_graph=True)
             optimizer_G.step()
+
+            loss_d.backward()
             optimizer_D.step()
 
             losses_d.append(loss_d.item())
@@ -92,17 +95,24 @@ def train(dataloader, discriminator, generator, optimizer_G, optimizer_D):
             # Save Images
             # -----------
 
-            batches_done = epoch * len(dataloader) + i
+            batches_done = epoch * len(dataloader) + step
             if batches_done % args.save_interval == 0:
                 # Sample
                 z = torch.randn((args.n_samples, generator.latent_dim))
                 generated_img = generator.forward(z)
                 generated_img = generated_img.reshape(-1, 1, 28, 28)
-                save_image(generated_img, f"grid_Epoch{epoch}.png", nrow=4, padding=2, normalize=True)
+                save_image(generated_img, f"gan_images/grid_Epoch{epoch}.png", nrow=4, padding=2, normalize=True)
 
-        gen_curve.append(losses_g)
-        disc_curve.append(losses_d)
-    save_elbo_plot(gen_curve, disc_curve, 'images/loss.pdf')
+            # if step % args.print_every == 0:
+            #     print("[{}] Loss_G = {}, Loss_D = {} ".format(datetime.now().strftime("%Y-%m-%d %H:%M"), loss_g.item(), loss_d.item()) + '\n')
+
+        print(f"[Epoch {epoch}] loss generator: {losses_g[-1]} loss discriminator: {losses_d[-1]}")
+
+        gen_curve.append(mean_(losses_g))
+        disc_curve.append(mean_(losses_d))
+        save_elbo_plot(gen_curve, disc_curve, 'gan_images/loss.pdf')
+    save_elbo_plot(gen_curve, disc_curve, 'gan_images/loss.pdf')
+
 
 def save_elbo_plot(generator_curve, discriminator_curve, filename):
     plt.figure(figsize=(12, 6))
@@ -114,9 +124,10 @@ def save_elbo_plot(generator_curve, discriminator_curve, filename):
     plt.tight_layout()
     plt.savefig(filename)
 
+
 def main():
     # Create output image directory
-    os.makedirs('images', exist_ok=True)
+    os.makedirs('gan_images', exist_ok=True)
     device = torch.device(args.device)
 
     # load data
@@ -157,6 +168,8 @@ if __name__ == "__main__":
                         help="Path to a file to save the model on")
     parser.add_argument('--n_samples', default=16, type=int,
                         help='number of samples')
+    parser.add_argument('--print_every', default=100, type=int,
+                        help='print every step')
     args = parser.parse_args()
 
     main()

@@ -100,7 +100,7 @@ def train(dataloader, discriminator, generator, optimizer_G, optimizer_D, device
             batches_done = epoch * len(dataloader) + step
             if batches_done % args.save_interval == 0:
                 # Sample
-                z = torch.randn((args.n_samples, generator.latent_dim))
+                z = torch.randn((args.n_samples, generator.latent_dim)).to(device)
                 generated_img = generator.forward(z)
                 generated_img = generated_img.reshape(-1, 1, 28, 28)
                 save_image(generated_img, f"gan_images/grid_Epoch{epoch}.png", nrow=4, padding=2, normalize=True)

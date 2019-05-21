@@ -12,7 +12,7 @@ from datetime import datetime
 
 
 class Generator(nn.Module):
-    def __init__(self, latent_dim, input_dim=784, h_dim=128):
+    def __init__(self, latent_dim, input_dim=784, h_dim=128, device=None):
         super(Generator, self).__init__()
 
         self.latent_dim = latent_dim
@@ -33,15 +33,16 @@ class Generator(nn.Module):
             nn.Linear(8 * h_dim, input_dim),  # 1024 -> input_dim
             nn.Tanh()
         )
+        self.to(device)
 
     def forward(self, z):
         return self.generator(z)
 
 
 class Discriminator(nn.Module):
-    def __init__(self, input_dim=784, h_dim=512):
+    def __init__(self, input_dim=784, h_dim=512, device=None):
         super(Discriminator, self).__init__()
-
+        self.device = device
         self.descriminator = nn.Sequential(
             nn.Linear(input_dim, h_dim),  # input_dim -> 512
             nn.LeakyReLU(0.2),
@@ -50,19 +51,20 @@ class Discriminator(nn.Module):
             nn.Linear(int(h_dim / 2), 1),  # 256 -> 1
             nn.Sigmoid()
         )
+        self.to(device)
 
     def forward(self, img):
         return self.descriminator(img)
 
 
-def train(dataloader, discriminator, generator, optimizer_G, optimizer_D):
+def train(dataloader, discriminator, generator, optimizer_G, optimizer_D, device):
 
     gen_curve, disc_curve = [], []
     for epoch in range(args.n_epochs):
         losses_d, losses_g = [], []
         for step, (imgs, _) in enumerate(dataloader):
             # imgs.cuda() # what is this?
-            imgs = imgs.reshape(imgs.shape[0], -1) # [batch_size, 784] make images 1-dimensional
+            imgs = imgs.reshape(imgs.shape[0], -1).to(device) # [batch_size, 784] make images 1-dimensional
 
             # Train Generator
             # ---------------
@@ -139,13 +141,13 @@ def main():
         batch_size=args.batch_size, shuffle=True)
 
     # Initialize models and optimizers
-    generator = Generator(args.latent_dim)
-    discriminator = Discriminator()
+    generator = Generator(args.latent_dim, device=device)
+    discriminator = Discriminator(device=device)
     optimizer_G = torch.optim.Adam(generator.parameters(), lr=args.lr)
     optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=args.lr)
 
     # Start training
-    train(dataloader, discriminator, generator, optimizer_G, optimizer_D)
+    train(dataloader, discriminator, generator, optimizer_G, optimizer_D, device)
 
     torch.save(generator.state_dict(), args.save_model)
 

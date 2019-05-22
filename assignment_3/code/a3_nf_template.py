@@ -83,7 +83,7 @@ class Coupling(torch.nn.Module):
         b = self.mask
 
         s, t = self.nn.forward(b * z).chunk(2, dim=1)
-        s = nn.tanh(s)
+        s = torch.tanh(s)
 
         if not reverse:
             z = b * z + (1-b) * (z * torch.exp(s) + t)
@@ -186,7 +186,7 @@ class Model(nn.Module):
         return z
 
 
-def epoch_iter(model, data, optimizer):
+def epoch_iter(model, data, optimizer, device=None):
     """
     Perform a single epoch for either the training or validation.
     use model.training to determine if in 'training mode' or not.
@@ -197,9 +197,9 @@ def epoch_iter(model, data, optimizer):
 
     losses = []
 
-    for step, batch in enumerate(data):
+    for step, (batch, _ ) in enumerate(data):
 
-        batch = batch.reshape(batch.shape[0], -1)  # batch = [128, 784=28*28] column known, row unknown
+        batch = batch.reshape(batch.shape[0], -1).to(device)  # batch = [128, 784=28*28] column known, row unknown
         log_px = -torch.mean(model.forward(batch))
 
         if model.training:
@@ -215,17 +215,17 @@ def epoch_iter(model, data, optimizer):
     return stats.mean(losses/784/math.log(2,math.e))
 
 
-def run_epoch(model, data, optimizer):
+def run_epoch(model, data, optimizer, device=None):
     """
     Run a train and validation epoch and return average bpd for each.
     """
     traindata, valdata = data
 
     model.train()
-    train_bpd = epoch_iter(model, traindata, optimizer)
+    train_bpd = epoch_iter(model, traindata, optimizer, device)
 
     model.eval()
-    val_bpd = epoch_iter(model, valdata, optimizer)
+    val_bpd = epoch_iter(model, valdata, optimizer, device)
 
     return train_bpd, val_bpd
 
@@ -242,12 +242,14 @@ def save_bpd_plot(train_curve, val_curve, filename):
 
 
 def main():
+    device = torch.device(ARGS.device)
+
     data = mnist()[:2]  # ignore test split
 
-    model = Model(shape=[784])
+    model = Model(shape=[784]).to(device)
 
-    if torch.cuda.is_available():
-        model = model.cuda()
+    # if torch.cuda.is_available():
+    #     model = model.cuda()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
@@ -255,7 +257,7 @@ def main():
 
     train_curve, val_curve = [], []
     for epoch in range(ARGS.epochs):
-        bpds = run_epoch(model, data, optimizer)
+        bpds = run_epoch(model, data, optimizer, device)
         train_bpd, val_bpd = bpds
         train_curve.append(train_bpd)
         val_curve.append(val_bpd)
@@ -275,6 +277,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', default=40, type=int,
                         help='max number of epochs')
+    parser.add_argument('--device', type=str, default="cuda:0",
+                        help="Training device 'cpu' or 'cuda:0'")
 
     ARGS = parser.parse_args()
 

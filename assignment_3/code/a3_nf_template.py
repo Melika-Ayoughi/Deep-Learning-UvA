@@ -207,12 +207,12 @@ def epoch_iter(model, data, optimizer, device=None):
             log_px.backward()
             torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=0.6)  # prevents maximum gradient problem
             optimizer.step()
-        losses.append(log_px.item())
+        losses.append(log_px.item() / (784 * math.log(2)))
 
         if step % ARGS.print_every == 0:
-            print("[{}] Loss = {} ".format(datetime.now().strftime("%Y-%m-%d %H:%M"), log_px) + '\n')
+            print("[{}] Loss = {}".format(datetime.now().strftime("%Y-%m-%d %H:%M"), log_px) + '\n')
 
-    return stats.mean(losses/ 784 / math.log(2))
+    return stats.mean(losses)
 
 
 def run_epoch(model, data, optimizer, device=None):
@@ -272,8 +272,9 @@ def main():
         generated_img = model.sample(ARGS.n_samples)
         generated_img = generated_img.reshape(-1, 1, 28, 28)
         save_image(generated_img, f"images_nfs/grid_Epoch{epoch}.png", nrow=int(math.sqrt(ARGS.n_samples)), padding=2, normalize=True)
-
-    save_bpd_plot(train_curve, val_curve, 'nfs_bpd.pdf')
+        save_bpd_plot(train_curve, val_curve, 'images_nfs/nfs_bpd.pdf')
+    torch.save(model.state_dict(), ARGS.save_model)
+    save_bpd_plot(train_curve, val_curve, 'images_nfs/nfs_bpd.pdf')
 
 
 if __name__ == "__main__":
@@ -286,6 +287,8 @@ if __name__ == "__main__":
                         help='print every step')
     parser.add_argument('--n_samples', default=16, type=int,
                         help='number of samples')
+    parser.add_argument('--save_model', type=str, default="./images_nfs/nf_generator.pt",
+                        help="Path to a file to save the model on")
 
     ARGS = parser.parse_args()
 

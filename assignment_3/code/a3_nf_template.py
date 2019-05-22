@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import numpy as np
 from datasets.mnist import mnist
 import os
-from torchvision.utils import make_grid
+from torchvision.utils import save_image
 import math
 from datetime import datetime
 import statistics as stats
@@ -19,7 +19,7 @@ def log_prior(x):
     N(x | mu=0, sigma=1).
     """
 
-    return torch.sum(-0.5 * (torch.log(2*math.pi) + x**2), dim=1)
+    return torch.sum(-0.5 * (math.log(2*math.pi) + x**2), dim=1)
 
 
 def sample_prior(size):
@@ -207,12 +207,12 @@ def epoch_iter(model, data, optimizer, device=None):
             log_px.backward()
             torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=0.6)  # prevents maximum gradient problem
             optimizer.step()
-        losses.append(log_px.item()) # this is so not correct!
+        losses.append(log_px.item())
 
         if step % ARGS.print_every == 0:
             print("[{}] Loss = {} ".format(datetime.now().strftime("%Y-%m-%d %H:%M"), log_px) + '\n')
 
-    return stats.mean(losses/784/math.log(2,math.e))
+    return stats.mean(losses/ 784 / math.log(2))
 
 
 def run_epoch(model, data, optimizer, device=None):
@@ -269,6 +269,9 @@ def main():
         #  You can use the make_grid functionality that is already imported.
         #  Save grid to images_nfs/
         # --------------------------------------------------------------------
+        generated_img = model.sample(ARGS.n_samples)
+        generated_img = generated_img.reshape(-1, 1, 28, 28)
+        save_image(generated_img, f"images_nfs/grid_Epoch{epoch}.png", nrow=int(math.sqrt(ARGS.n_samples)), padding=2, normalize=True)
 
     save_bpd_plot(train_curve, val_curve, 'nfs_bpd.pdf')
 
@@ -279,6 +282,10 @@ if __name__ == "__main__":
                         help='max number of epochs')
     parser.add_argument('--device', type=str, default="cuda:0",
                         help="Training device 'cpu' or 'cuda:0'")
+    parser.add_argument('--print_every', default=10, type=int,
+                        help='print every step')
+    parser.add_argument('--n_samples', default=16, type=int,
+                        help='number of samples')
 
     ARGS = parser.parse_args()
 

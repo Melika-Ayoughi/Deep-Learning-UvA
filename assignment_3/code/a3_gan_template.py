@@ -8,7 +8,7 @@ from torchvision.utils import save_image
 from torchvision import datasets
 import matplotlib.pyplot as plt
 from statistics import mean as mean_
-from datetime import datetime
+import math
 
 
 class Generator(nn.Module):
@@ -103,7 +103,7 @@ def train(dataloader, discriminator, generator, optimizer_G, optimizer_D, device
                 z = torch.randn((args.n_samples, generator.latent_dim)).to(device)
                 generated_img = generator.forward(z)
                 generated_img = generated_img.reshape(-1, 1, 28, 28)
-                save_image(generated_img, f"gan_images/grid_Epoch{epoch}.png", nrow=4, padding=2, normalize=True)
+                save_image(generated_img, f"gan_images/grid_Epoch{epoch}.png", nrow=int(math.sqrt(args.n_samples)), padding=2, normalize=True)
 
             # if step % args.print_every == 0:
             #     print("[{}] Loss_G = {}, Loss_D = {} ".format(datetime.now().strftime("%Y-%m-%d %H:%M"), loss_g.item(), loss_d.item()) + '\n')

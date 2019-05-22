@@ -8,6 +8,9 @@ import numpy as np
 from datasets.mnist import mnist
 import os
 from torchvision.utils import make_grid
+import math
+from datetime import datetime
+import statistics as stats
 
 
 def log_prior(x):
@@ -15,15 +18,15 @@ def log_prior(x):
     Compute the elementwise log probability of a standard Gaussian, i.e.
     N(x | mu=0, sigma=1).
     """
-    raise NotImplementedError
-    return logp
+
+    return torch.sum(-0.5 * (torch.log(2*math.pi) + x**2), dim=1)
 
 
 def sample_prior(size):
     """
     Sample from a standard Gaussian.
     """
-    raise NotImplementedError
+    sample = torch.randn(size)
 
     if torch.cuda.is_available():
         sample = sample.cuda()
@@ -56,7 +59,11 @@ class Coupling(torch.nn.Module):
         # scale variables.
         # Suggestion: Linear ReLU Linear ReLU Linear.
         self.nn = torch.nn.Sequential(
-            None
+            nn.Linear(c_in, n_hidden),
+            nn.ReLU(),
+            nn.Linear(n_hidden, n_hidden),
+            nn.ReLU(),
+            nn.Linear(n_hidden, 2 * c_in),
             )
 
         # The nn should be initialized such that the weights of the last layer
@@ -73,11 +80,16 @@ class Coupling(torch.nn.Module):
         # NOTE: For stability, it is advised to model the scale via:
         # log_scale = tanh(h), where h is the scale-output
         # from the NN.
+        b = self.mask
+
+        s, t = self.nn.forward(b * z).chunk(2, dim=1)
+        s = nn.tanh(s)
 
         if not reverse:
-            raise NotImplementedError
+            z = b * z + (1-b) * (z * torch.exp(s) + t)
+            ldj = ldj + s
         else:
-            raise NotImplementedError
+            z = (z - t * (1-b)) / (b + (1-b) * torch.exp(s))
 
         return z, ldj
 
@@ -156,8 +168,8 @@ class Model(nn.Module):
         z, ldj = self.flow(z, ldj)
 
         # Compute log_pz and log_px per example
-
-        raise NotImplementedError
+        log_pz = log_prior(z)
+        log_px = log_pz + ldj
 
         return log_px
 
@@ -168,8 +180,8 @@ class Model(nn.Module):
         """
         z = sample_prior((n_samples,) + self.flow.z_shape)
         ldj = torch.zeros(z.size(0), device=z.device)
-
-        raise NotImplementedError
+        z, ldj = self.flow(z, ldj, reverse=True)
+        z, ldj = self.logit_normalize(z, ldj, reverse=True)
 
         return z
 
@@ -183,9 +195,24 @@ def epoch_iter(model, data, optimizer):
     log_2 likelihood per dimension) averaged over the complete epoch.
     """
 
-    avg_bpd = None
+    losses = []
 
-    return avg_bpd
+    for step, batch in enumerate(data):
+
+        batch = batch.reshape(batch.shape[0], -1)  # batch = [128, 784=28*28] column known, row unknown
+        log_px = -torch.mean(model.forward(batch))
+
+        if model.training:
+            model.zero_grad()
+            log_px.backward()
+            torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=0.6)  # prevents maximum gradient problem
+            optimizer.step()
+        losses.append(log_px.item()) # this is so not correct!
+
+        if step % ARGS.print_every == 0:
+            print("[{}] Loss = {} ".format(datetime.now().strftime("%Y-%m-%d %H:%M"), log_px) + '\n')
+
+    return stats.mean(losses/784/math.log(2,math.e))
 
 
 def run_epoch(model, data, optimizer):

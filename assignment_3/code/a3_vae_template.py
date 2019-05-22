@@ -3,13 +3,14 @@ import argparse
 import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
-import matplotlib.image as matimage
+import scipy.stats as stats
 
 
 import time
 from datetime import datetime
 import numpy as np
-from torchvision.utils import make_grid, save_image
+from torchvision.utils import save_image
+import math
 
 from datasets.bmnist import bmnist
 
@@ -102,6 +103,22 @@ class VAE(nn.Module):
         sampled_imgs = (torch.rand(img_means.shape) < img_means)
         return sampled_imgs, img_means
 
+    def get_manifold(self, i):
+        epsilon = 1e-3
+        vals = np.linspace(0 + epsilon, 1 - epsilon, i)
+        z = torch.stack([torch.tensor(stats.norm.ppf([x, y])).float() for x in vals for y in vals])
+
+        with torch.no_grad():
+            mean = self.decoder.forward(z)
+
+        # xy = np.mgrid[0:i, 0:i].reshape((2, i ** 2)).T / (i - 1)
+        # xy = (xy + 4.45e-2) * 9e-1
+        #
+        # z = torch.tensor(stats.norm.ppf(xy), dtype=torch.float)
+        # with torch.no_grad():
+        #     mean = self.decoder.forward(z)
+        return mean
+
 
 def epoch_iter(model, data, optimizer):
     """
@@ -181,13 +198,19 @@ def main():
         # Only use means for better visualization
         # Reshape the data to [n_samples, 1, 28, 28]
         means = means.reshape(-1, 1, 28, 28)
-        save_image(means, f"grid_Epoch{epoch}.png", nrow=4, padding=2, normalize=True)
+        save_image(means, f"grid_Epoch{epoch}.png", nrow=int(math.sqrt(ARGS.n_samples)), padding=2, normalize=True)
+
 
     # --------------------------------------------------------------------
     #  Add functionality to plot plot the learned data manifold after
     #  if required (i.e., if zdim == 2). You can use the make_grid
     #  functionality that is already imported.
     # --------------------------------------------------------------------
+
+        if ARGS.zdim == 2:
+            manifold_means = model.get_manifold(20)
+            manifold_means = manifold_means.reshape(-1, 1, 28, 28)
+            save_image(manifold_means, f"manifold{epoch}.png", nrow=20, padding=2, normalize=True)
 
     save_elbo_plot(train_curve, val_curve, 'elbo.pdf')
 

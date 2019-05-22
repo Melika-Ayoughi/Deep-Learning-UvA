@@ -87,9 +87,9 @@ class Coupling(torch.nn.Module):
 
         if not reverse:
             z = b * z + (1-b) * (z * torch.exp(s) + t)
-            ldj = ldj + s
+            ldj = ldj + torch.sum((1-b) * s, dim=1)
         else:
-            z = (z - t * (1-b)) / (b + (1-b) * torch.exp(s))
+            z = b * z + (1-b) * ((z - t) / torch.exp(s)) # or * torch.exp(-s)
 
         return z, ldj
 

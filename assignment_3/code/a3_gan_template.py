@@ -74,8 +74,12 @@ def train(dataloader, discriminator, generator, optimizer_G, optimizer_D, device
             z = torch.randn((imgs.shape[0], generator.latent_dim)).to(device)
             generated_img = generator.forward(z)
             D_GZ = discriminator.forward(generated_img)
-
             loss_g = -torch.mean(torch.log(D_GZ))
+
+            # New sample
+            z = torch.randn((imgs.shape[0], generator.latent_dim)).to(device)
+            generated_img = generator.forward(z)
+            D_GZ = discriminator.forward(generated_img)
             loss_d = -(torch.mean(torch.log(D_X)) + torch.mean(torch.log(1-D_GZ)))
 
             optimizer_G.zero_grad()

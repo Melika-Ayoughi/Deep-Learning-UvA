@@ -1,6 +1,6 @@
-*.pdf
-*.md
-assignment_1/*.pdf
-assignment_2/*.pdf
-assignment_3/*.pdf
+*.pdf text
+*.md text
+assignment_1/*.pdf text
+assignment_2/*.pdf text
+assignment_3/*.pdf text
 assignment_1/environment.yml
